@@ -11,6 +11,8 @@ def interpret_and_process(base64stringdata):
         debaseddata2 = base64.b64decode(debaseddata1).rstrip()
     except Exception as b64decodeerror:
         print(f"Error: Unable to decode json data: {b64decodeerror}")
+        returnmsg = "1 Invalid data."
+        return returnmsg
 
     print(debaseddata2)
 
