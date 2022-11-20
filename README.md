@@ -13,13 +13,15 @@ The server part listens to connections from a client and verifies the access wit
 There is a Docker image available:
 https://hub.docker.com/r/schnitz81/pwmgr-server
 
-Alternatively, use the Dockerfile to build it. See comments in Dockerfile for run example.
+Alt. use the Dockerfile to build it. The appropriate port needs to be forwarded and the /db folder mounted for persistence. See comments in Dockerfile for run example.
 
 
 ### Client
 
 #### Installation
-
+Download the client file and make it executable.<br>
+Example:<br>
+```wget -O /usr/local/bin/pwmgr https://raw.githubusercontent.com/schnitz81/pwmgr/main/client/pwmgr.sh && chmod +x /usr/local/bin/pwmgr```
 
 #### Usage
 

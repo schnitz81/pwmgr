@@ -11,6 +11,7 @@ def tcp_listen_and_reply():
 
     # create a socket
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
     # bind the socket with server and port number
     s.bind((host, port))
@@ -21,6 +22,7 @@ def tcp_listen_and_reply():
     c, addr = s.accept()
 
     # display client address
+    print("------------------------------------")
     print("connection from:", str(addr))
 
     data = c.recv(4096)
@@ -44,7 +46,6 @@ def tcp_listen_and_reply():
     except Exception as send_e:
         print("Response send error:")
         print(send_e)
-
 
     # disconnect the server
     c.close()

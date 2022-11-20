@@ -207,11 +207,10 @@ def interpret_and_process(base64stringdata):
             returnmsg = f"3 {records}"
         elif database.nbr_of_title_hits(conn, title) < 1:
             returnmsg = f"1 No matching record found."
-            print(returnmsg)
         else:
             returnmsg = "1 Unknown server error."
-            print(returnmsg)
         database.close_connection(conn)
+        print(returnmsg)
         return returnmsg
 
 
@@ -250,11 +249,10 @@ def interpret_and_process(base64stringdata):
             returnmsg = f"3 {records}"
         elif database.nbr_of_title_hits(conn, title) < 1:
             returnmsg = f"1 No matching record found."
-            print(returnmsg)
         else:
             returnmsg = "1 Unknown server error."
-            print(returnmsg)
         database.close_connection(conn)
+        print(returnmsg)
         return returnmsg
 
 
@@ -308,4 +306,9 @@ def interpret_and_process(base64stringdata):
             returnmsg = "1 Unknown server error."
             print(returnmsg)
         database.close_connection(conn)
+        return returnmsg
+
+    else:
+        returnmsg = f"1 Unknown command."
+        print(returnmsg)
         return returnmsg
