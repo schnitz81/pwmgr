@@ -11,11 +11,19 @@ function init ()
   fi
   echo "Server access config."
   echo ; read -p "Server address/IP: " server
+  if [ "$server" == '' ]; then
+    echo ; echo "Error: server address can't be empty."; exit 1
+  fi
   echo ; read -p "Enter server access username: " username
+  if [ "$username" == '' ]; then
+    echo ; echo "Error: server user can't be empty."; exit 1
+  fi
   echo ; read -s -p "Enter server access password: " serverpw
   echo ; read -s -p "Repeat server access password: " serverpw2
   if [ "$serverpw" != "$serverpw2" ]; then
     echo ; echo "Error: passwords don't match."; exit 1
+  elif [ "$serverpw" == '' ]; then
+    echo ; echo "Error: server password can't be empty."; exit 1
   fi
 
   # create folder for session file
@@ -61,19 +69,32 @@ function init-change ()
   if [ "$configask" != 'y' ] && [ "$configask" != 'Y' ] && [ "$configask" != 'yes' ] && [ "$configask" != 'YES' ]; then
     return
   fi
-  echo "Server access config."
+  echo "Server access config update."
   echo ; read -p "Server address/IP: " server
+  if [ "$server" == '' ]; then
+    echo ; echo "Error: server address can't be empty."; exit 1
+  fi
   echo ; read -p "Enter CURRENT server access username: " serveruser
+  if [ "$serveruser" == '' ]; then
+    echo ; echo "Error: server user can't be empty."; exit 1
+  fi
   echo ; read -s -p "Enter CURRENT server access password: " serverpw
   echo ; read -s -p "Repeat CURRENT server access password: " serverpw2
   if [ "$serverpw" != "$serverpw2" ]; then
     echo ; echo "Error: passwords don't match."; exit 1
+  elif [ "$serverpw" == '' ]; then
+    echo ; echo "Error: server password can't be empty."; exit 1
   fi
   echo ; read -p "Enter NEW server access username: " servernewuser
+  if [ "$servernewuser" == '' ]; then
+    echo ; echo "Error: server user can't be empty."; exit 1
+  fi
   echo ; read -s -p "Enter NEW server access password: " servernewpw
   echo ; read -s -p "Repeat NEW server access password: " servernewpw2
   if [ "$servernewpw" != "$servernewpw2" ]; then
     echo ; echo "Error: passwords don't match."; exit 1
+  elif [ "$servernewpw" == '' ]; then
+    echo ; echo "Error: server password can't be empty."; exit 1
   fi
 
   # create folder for session file
@@ -142,22 +163,29 @@ function add ()
   else
     echo ; read -p "Name/site/title: " title
   fi
+  if [ "$title" == '' ]; then
+    echo ; echo "Error: title can't be empty."; exit 1
+  fi
   echo ; read -p "Enter username: " username
+  if [ "$username" == '' ]; then
+    echo ; echo "Error: Server username can't be empty."; exit 1
+  fi
   echo ; read -s -p "Enter password: " pw
   echo ; read -s -p "Repeat password: " pw2
-  echo ; read -p "Extra field (may be blank): " extra
   if [ "$pw" != "$pw2" ]; then
     echo "Error: passwords don't match."; exit 1
+  elif [ "$pw" == '' ]; then
+    echo ; echo "Error: Server password can't be empty."; exit 1
   fi
-  if [ "$title" == '' ] || [ "$username" == '' ] || [ "$pw" == '' ]; then
-    echo ; echo "Error: needs title, user and password."; exit 1
-  fi
+  echo ; read -p "Extra field (may be blank): " extra
   echo ; read -s -p "Enter encryption password: " encryptionpw
   echo ; read -s -p "Repeat encryption password: " encryptionpw2
   if [ "$encryptionpw" != "$encryptionpw2" ]; then
     echo ; echo "Error: Encryption passwords don't match."; exit 1
   elif [ "$encryptionpw" == "$pw" ]; then
     echo ; echo "Error: Server session password and encryption password shouldn't be the same."; exit 1
+  elif [ "$encryptionpw" == '' ]; then
+    echo ; echo "Error: Encryption password can't be empty."; exit 1
   fi
 
   # encrypt user and pw
@@ -229,6 +257,9 @@ function get ()
         ;;
       2)
         echo ; read -s -p "Enter encryption password: " encryptionpw
+        if [ "$encryptionpw" == '' ]; then
+          echo ; echo "Error: Encryption password can't be empty."; exit 1
+        fi
         title=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2)
         username=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 3 | openssl enc -chacha20 -md sha3-512 -a -d -pbkdf2 -iter 107172 -salt -pass pass:"$encryptionpw")
         pw=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 4 | openssl enc -chacha20 -md sha3-512 -a -d -pbkdf2 -iter 107172 -salt -pass pass:"$encryptionpw")
@@ -368,21 +399,25 @@ function update ()
     exit 1
   fi
   echo ; read -p "Enter NEW username: " username
+  if [ "$username" == '' ]; then
+    echo ; echo "Error: Server username can't be empty."; exit 1
+  fi
   echo ; read -s -p "Enter NEW password: " pw
   echo ; read -s -p "Repeat NEW password: " pw2
-  echo ; read -p "Extra field (may be blank): " extra
   if [ "$pw" != "$pw2" ]; then
-    echo ; echo "Error: passwords don't match."; exit 1
+    echo "Error: passwords don't match."; exit 1
+  elif [ "$pw" == '' ]; then
+    echo ; echo "Error: Server password can't be empty."; exit 1
   fi
-  if [ "$title" == '' ] || [ "$username" == '' ] || [ "$pw" == '' ]; then
-    echo ; echo "Error: needs title, user and password."; exit 1
-  fi
+  echo ; read -p "Extra field (may be blank): " extra
   echo ; read -s -p "Enter encryption password: " encryptionpw
   echo ; read -s -p "Repeat encryption password: " encryptionpw2
   if [ "$encryptionpw" != "$encryptionpw2" ]; then
     echo ; echo "Error: Encryption passwords don't match."; exit 1
   elif [ "$encryptionpw" == "$pw" ]; then
     echo ; echo "Error: Server session password and encryption password shouldn't be the same."; exit 1
+  elif [ "$encryptionpw" == '' ]; then
+    echo ; echo "Error: Encryption password can't be empty."; exit 1
   fi
 
   # encrypt user and pw
