@@ -9,7 +9,7 @@ function init ()
 	if [ "$configask" != 'y' ] && [ "$configask" != 'Y' ] && [ "$configask" != 'yes' ] && [ "$configask" != 'YES' ]; then
 		return
 	fi
-	echo "Server access config."
+	echo "Session config."
 	echo ; read -p "Server address/IP: " server
 	if [ "$server" == '' ]; then
 		echo ; echo "Error: server address can't be empty."; exit 1
@@ -69,7 +69,7 @@ function init-change ()
 	if [ "$configask" != 'y' ] && [ "$configask" != 'Y' ] && [ "$configask" != 'yes' ] && [ "$configask" != 'YES' ]; then
 		return
 	fi
-	echo "Server access config update."
+	echo "Session config update."
 	echo ; read -p "Server address/IP: " server
 	if [ "$server" == '' ]; then
 		echo ; echo "Error: server address can't be empty."; exit 1
@@ -269,6 +269,7 @@ function get ()
 					echo ; echo "Error: Wrong encryption/decryption password given. Unable to decrypt."
 					exit 1
 				fi
+				echo
 				echo "title: $title"
 				echo "username: $username"
 				echo "password: $pw"
