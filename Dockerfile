@@ -17,7 +17,7 @@ WORKDIR /pwmgr
 ENTRYPOINT ["python","-u","main.py"]
 
 # build:
-# docker build . -t pwmgr
+# docker build . -t pwmgr-server
 
 # run:
-# docker run --name pwmgr-server --restart unless-stopped -d -v /path/to/db-store:/db -p 48222:48222 pwmgr
+# docker run --name pwmgr-server --restart unless-stopped -d -v /path/to/db-store:/db -p 48222:48222 pwmgr-server
