@@ -2,11 +2,11 @@ import config
 import sqlite3
 
 
-def create_connection(serveruser):
+def create_connection(sessionuser):
     # create db connection and create new db if both db and backup are missing
     conn = None
     try:
-        conn = sqlite3.connect(f'{config.db_path}/{serveruser}.db', timeout=12)
+        conn = sqlite3.connect(f'{config.db_path}/{sessionuser}.db', timeout=12)
         return conn
     except Exception as e:
         print(e)
@@ -23,8 +23,8 @@ def create_tables(conn):
             '''
                CREATE TABLE IF NOT EXISTS credentials (
                id INTEGER PRIMARY KEY,
-               serveruser TEXT NOT NULL,
-               serverpw TEXT NOT NULL      
+               sessionuser TEXT NOT NULL,
+               sessionpw TEXT NOT NULL      
            );'''
         )
         c.execute(
@@ -52,23 +52,23 @@ def credentials_exist(conn):
             return True
 
 
-def credentials_match(conn, serveruser, serverpw):
+def credentials_match(conn, sessionuser, sessionpw):
     c = conn.cursor()
     with conn:
-        c.execute("SELECT serveruser FROM credentials")
-        dbserveruser = c.fetchone()[0]
-        c.execute("SELECT serverpw FROM credentials")
-        dbserverpw = c.fetchone()[0]
-        if dbserveruser == serveruser and dbserverpw == serverpw:
+        c.execute("SELECT sessionuser FROM credentials")
+        dbsessionuser = c.fetchone()[0]
+        c.execute("SELECT sessionpw FROM credentials")
+        dbsessionpw = c.fetchone()[0]
+        if dbsessionuser == sessionuser and dbsessionpw == sessionpw:
             return True
         else:
             return False
 
 
-def store_credentials(conn, serveruser, serverpw):
+def store_credentials(conn, sessionuser, sessionpw):
     c = conn.cursor()
     try:
-        c.execute(f'''REPLACE INTO credentials (id, serveruser, serverpw) VALUES ('1', '{serveruser}', '{serverpw}');''')
+        c.execute(f'''REPLACE INTO credentials (id, sessionuser, sessionpw) VALUES ('1', '{sessionuser}', '{sessionpw}');''')
         return True
     except Exception as store_e:
         print(store_e)

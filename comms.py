@@ -1,6 +1,6 @@
 import socket
 import config
-import parsing
+import process
 import base64
 
 def tcp_listen_and_reply():
@@ -30,7 +30,7 @@ def tcp_listen_and_reply():
 
     # remove newline from input data
     base64stringdata = stringdata.rstrip()
-    returnmsg = parsing.interpret_and_process(base64stringdata)
+    returnmsg = process.interpret_and_process(base64stringdata)
 
     try:
         returnmsg = base64.b64encode(base64.b64encode(returnmsg.encode("utf-8")))

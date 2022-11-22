@@ -2,7 +2,7 @@
 A centralized password manager with distributed encryption.
 
 ## Description
-The server part listens to connections from a client and verifies the access with server credentials that are predefined through the init command. Multiple clients can be used as long as they are aligned  against the server with the same server credentials given with init. 
+The server part listens to connections from a client and verifies the access with session credentials that are predefined through the init command. Multiple clients can be used as long as they are aligned  against the server with the same credentials given with init. 
 <br><br>The security functionality is based on a strong encryption of every record that is made client-side before sent to the server. Even if the the server DB is compromised or the communication is eavesdropped, the records themselves will still be safe.
 
 ### Server
@@ -28,10 +28,11 @@ Example:<br>
 Run command:<br> 
 ```pwmgr (parameter)```
 
-Init must be run first to create a server session before the other commands can be used. This is the base of the client<->server interaction. 
+Init must be run first to create a session before the other commands can be used. This is the base of the client<->server interaction. 
 
 - init / config<br>
-  Create a server session<br><br>
+  Create a session. This creates a local session config and attempts to create a remote server db session. If the username db already exists, it's reused. Previous session password must match.<br>
+  By entering the same sessionuser/sessionpassword  multiple clients can be used with the same server DB.<br><br>
 - init-change / config-change<br>
   Change credentials of an existing session. Old credentials must be given for verification.<br><br> 
 - add / encrypt / enc / put / save<br>

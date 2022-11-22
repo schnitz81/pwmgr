@@ -10,8 +10,8 @@ def interpret_and_process(base64stringdata):
         debaseddata1 = base64.b64decode(base64stringdata)
         debaseddata2 = base64.b64decode(debaseddata1).rstrip()
     except Exception as b64decodeerror:
-        print(f"Error: Unable to decode json data: {b64decodeerror}")
-        returnmsg = "1 Invalid data."
+        print(f"Error: Unable to decode base64 data: {b64decodeerror}")
+        returnmsg = "1 Invalid base64 data to decode."
         return returnmsg
 
     print(debaseddata2)
@@ -24,10 +24,15 @@ def interpret_and_process(base64stringdata):
 
     ### init ############################################################################################
     if command == 'init':
-        serveruser = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[1])).decode('utf8').rstrip()
-        serverpw = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[2])).decode('utf8').rstrip()
-        print(f"Connecting to {serveruser} db.")
-        conn = database.create_connection(serveruser)
+        try:
+            sessionuser = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[1])).decode('utf8').rstrip()
+            sessionpw = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[2])).decode('utf8').rstrip()
+        except Exception as b64decodeerror:
+            print(f"Error: Unable to decode base64 data: {b64decodeerror}")
+            returnmsg = "1 Invalid base64 data to decode."
+            return returnmsg
+        print(f"Connecting to {sessionuser} db.")
+        conn = database.create_connection(sessionuser)
 
         # create tables if non-existent
         database.create_tables(conn)
@@ -36,7 +41,7 @@ def interpret_and_process(base64stringdata):
         if database.credentials_exist(conn):
 
             # check if received credentials match db
-            if database.credentials_match(conn, serveruser, serverpw):
+            if database.credentials_match(conn, sessionuser, sessionpw):
                 returnmsg = "2 Credentials match previous record. No change needed in server."
                 print(returnmsg)
                 database.close_connection(conn)
@@ -51,7 +56,7 @@ def interpret_and_process(base64stringdata):
 
         # credentials don't exist since before
         else:
-            credentials_stored = database.store_credentials(conn, serveruser, serverpw)
+            credentials_stored = database.store_credentials(conn, sessionuser, sessionpw)
             if credentials_stored:
                 returnmsg = "2 No previous credentials for user in DB. Saving."
             else:
@@ -62,12 +67,17 @@ def interpret_and_process(base64stringdata):
 
     ### init-change ############################################################################################
     elif command == 'init-change':
-        serveruser = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[1])).decode('utf8').rstrip()
-        serverpw = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[2])).decode('utf8').rstrip()
-        servernewuser = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[3])).decode('utf8').rstrip()
-        servernewpw = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[4])).decode('utf8').rstrip()
-        print(f"Connecting to {serveruser} db.")
-        conn = database.create_connection(serveruser)
+        try:
+            sessionuser = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[1])).decode('utf8').rstrip()
+            sessionpw = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[2])).decode('utf8').rstrip()
+            sessionnewuser = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[3])).decode('utf8').rstrip()
+            sessionnewpw = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[4])).decode('utf8').rstrip()
+        except Exception as b64decodeerror:
+            print(f"Error: Unable to decode base64 data: {b64decodeerror}")
+            returnmsg = "1 Invalid base64 data to decode."
+            return returnmsg
+        print(f"Connecting to {sessionuser} db.")
+        conn = database.create_connection(sessionuser)
 
         # create tables if non-existent
         database.create_tables(conn)
@@ -76,8 +86,8 @@ def interpret_and_process(base64stringdata):
         if database.credentials_exist(conn):
 
             # check if received credentials match db
-            if not database.credentials_match(conn, serveruser, serverpw):
-                returnmsg = "1 Current credentials wrong. Current user and password must be verified to change serveruser and serverpassword."
+            if not database.credentials_match(conn, sessionuser, sessionpw):
+                returnmsg = "1 Entered session credentials wrong. Current session user and password must be verified to change them."
                 print(returnmsg)
                 database.close_connection(conn)
                 return returnmsg
@@ -87,12 +97,12 @@ def interpret_and_process(base64stringdata):
                 dbfile_renamed = False
 
                 # overwrite old credentials with new in DB
-                credentials_stored = database.store_credentials(conn, servernewuser, servernewpw)
+                credentials_stored = database.store_credentials(conn, sessionnewuser, sessionnewpw)
                 database.close_connection(conn)
 
                 # rename database file to new username
                 if credentials_stored:
-                    dbfile_renamed = file.rename_file(f'{config.db_path}/{serveruser}.db', f'{config.db_path}/{servernewuser}.db')
+                    dbfile_renamed = file.rename_file(f'{config.db_path}/{sessionuser}.db', f'{config.db_path}/{sessionnewuser}.db')
 
                 if credentials_stored and dbfile_renamed:
                     returnmsg = "2 Old credentials overwritten and db file renamed successfully."
@@ -113,20 +123,25 @@ def interpret_and_process(base64stringdata):
 
     ### add | update #####################################################################################
     elif command == 'add' or command == 'update':
-        serveruser = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[1])).decode('utf8').rstrip()
-        serverpw = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[2])).decode('utf8').rstrip()
-        title = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[3])).decode('utf8').rstrip()
+        try:
+            sessionuser = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[1])).decode('utf8').rstrip()
+            sessionpw = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[2])).decode('utf8').rstrip()
+            title = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[3])).decode('utf8').rstrip()
+        except Exception as b64decodeerror:
+            print(f"Error: Unable to decode base64 data: {b64decodeerror}")
+            returnmsg = "1 Invalid base64 data to decode."
+            return returnmsg
         username = debaseddata2.split(' ')[4]
         pw = debaseddata2.split(' ')[5]
         extra = debaseddata2.split(' ')[6]
         verification = debaseddata2.split(' ')[7]
-        print(f"Connecting to {serveruser} db.")
-        conn = database.create_connection(serveruser)
+        print(f"Connecting to {sessionuser} db.")
+        conn = database.create_connection(sessionuser)
 
 
         # verify db existence
-        if not file.file_exists(f'{config.db_path}/{serveruser}.db'):
-            returnmsg = "1 Error: DB doesn't exist. Client and server init not aligned."
+        if not file.file_exists(f'{config.db_path}/{sessionuser}.db'):
+            returnmsg = "1 Error: DB doesn't exist. Client and server session not aligned."
             print(returnmsg)
             database.close_connection(conn)
             return returnmsg
@@ -134,20 +149,20 @@ def interpret_and_process(base64stringdata):
             print("DB exists.")
 
         # connect db
-        conn = database.create_connection(serveruser)
+        conn = database.create_connection(sessionuser)
 
-        # verify server credentials
-        if not database.credentials_match(conn, serveruser, serverpw):
-            returnmsg = "1 Server credentials don't match DB."
+        # verify session credentials
+        if not database.credentials_match(conn, sessionuser, sessionpw):
+            returnmsg = "1 Session credentials don't match DB."
             print(returnmsg)
             database.close_connection(conn)
             return returnmsg
         else:
-            print("Server credentials match.")
+            print("Session credentials received match server DB.")
 
         # avoid overwrite when add command is used
         if database.exact_title_exists(conn, title) and command != 'update':
-            returnmsg = "1 Error: Record already exists. Use update to overwrite/change password."
+            returnmsg = "1 Error: Record already exists. Use update to overwrite/change record."
             print(returnmsg)
             return returnmsg
 
@@ -162,7 +177,7 @@ def interpret_and_process(base64stringdata):
         if record_stored:
             if command == 'add':  # return message depending on command used
                 returnmsg = "2 Record stored in DB successfully."
-            else:
+            else:  # update command used
                 returnmsg = "2 Record updated in DB successfully."
         else:
             returnmsg = "1 Error: Record storing unsuccessful."
@@ -173,15 +188,20 @@ def interpret_and_process(base64stringdata):
 
     ### get ############################################################################################
     elif command == 'get':
-        serveruser = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[1])).decode('utf8').rstrip()
-        serverpw = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[2])).decode('utf8').rstrip()
+        try:
+            sessionuser = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[1])).decode('utf8').rstrip()
+            sessionpw = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[2])).decode('utf8').rstrip()
+        except Exception as b64decodeerror:
+            print(f"Error: Unable to decode base64 data: {b64decodeerror}")
+            returnmsg = "1 Invalid base64 data to decode."
+            return returnmsg
         title = debaseddata2.split(' ')[3]
-        print(f"Connecting to {serveruser} db.")
-        conn = database.create_connection(serveruser)
+        print(f"Connecting to {sessionuser} db.")
+        conn = database.create_connection(sessionuser)
 
         # verify db existence
-        if not file.file_exists(f'{config.db_path}/{serveruser}.db'):
-            returnmsg = "1 Error: DB doesn't exist. Client and server init not aligned."
+        if not file.file_exists(f'{config.db_path}/{sessionuser}.db'):
+            returnmsg = "1 Error: DB doesn't exist. Client and server session not aligned."
             print(returnmsg)
             database.close_connection(conn)
             return returnmsg
@@ -189,16 +209,16 @@ def interpret_and_process(base64stringdata):
             print("DB exists.")
 
         # connect db
-        conn = database.create_connection(serveruser)
+        conn = database.create_connection(sessionuser)
 
-        # verify server credentials
-        if not database.credentials_match(conn, serveruser, serverpw):
-            returnmsg = "1 Server credentials don't match DB."
+        # verify session credentials
+        if not database.credentials_match(conn, sessionuser, sessionpw):
+            returnmsg = "1 Session credentials don't match DB."
             print(returnmsg)
             database.close_connection(conn)
             return returnmsg
         else:
-            print("Server credentials match.")
+            print("Session credentials received match server DB.")
 
         # get record, exact match or multimatch suggestions
         if database.exact_title_exists(conn, title):
@@ -218,15 +238,20 @@ def interpret_and_process(base64stringdata):
 
     ### list ############################################################################################
     elif command == 'list':
-        serveruser = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[1])).decode('utf8').rstrip()
-        serverpw = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[2])).decode('utf8').rstrip()
+        try:
+            sessionuser = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[1])).decode('utf8').rstrip()
+            sessionpw = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[2])).decode('utf8').rstrip()
+        except Exception as b64decodeerror:
+            print(f"Error: Unable to decode base64 data: {b64decodeerror}")
+            returnmsg = "1 Invalid base64 data to decode."
+            return returnmsg
         title = debaseddata2.split(' ')[3]
-        print(f"Connecting to {serveruser} db.")
-        conn = database.create_connection(serveruser)
+        print(f"Connecting to {sessionuser} db.")
+        conn = database.create_connection(sessionuser)
 
         # verify db existence
-        if not file.file_exists(f'{config.db_path}/{serveruser}.db'):
-            returnmsg = "1 Error: DB doesn't exist. Client and server init not aligned."
+        if not file.file_exists(f'{config.db_path}/{sessionuser}.db'):
+            returnmsg = "1 Error: DB doesn't exist. Client and server session not aligned."
             print(returnmsg)
             database.close_connection(conn)
             return returnmsg
@@ -234,16 +259,16 @@ def interpret_and_process(base64stringdata):
             print("DB exists.")
 
         # connect db
-        conn = database.create_connection(serveruser)
+        conn = database.create_connection(sessionuser)
 
-        # verify server credentials
-        if not database.credentials_match(conn, serveruser, serverpw):
-            returnmsg = "1 Server credentials don't match DB."
+        # verify session credentials
+        if not database.credentials_match(conn, sessionuser, sessionpw):
+            returnmsg = "1 Session credentials don't match DB."
             print(returnmsg)
             database.close_connection(conn)
             return returnmsg
         else:
-            print("Server credentials match.")
+            print("Session credentials received match server DB.")
 
         # always get multimatch suggestions
         if database.nbr_of_title_hits(conn, title) >= 1:
@@ -260,15 +285,20 @@ def interpret_and_process(base64stringdata):
 
     ### delete ############################################################################################
     elif command == 'delete':
-        serveruser = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[1])).decode('utf8').rstrip()
-        serverpw = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[2])).decode('utf8').rstrip()
+        try:
+            sessionuser = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[1])).decode('utf8').rstrip()
+            sessionpw = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[2])).decode('utf8').rstrip()
+        except Exception as b64decodeerror:
+            print(f"Error: Unable to decode base64 data: {b64decodeerror}")
+            returnmsg = "1 Invalid base64 data to decode."
+            return returnmsg
         title = debaseddata2.split(' ')[3]
-        print(f"Connecting to {serveruser} db.")
-        conn = database.create_connection(serveruser)
+        print(f"Connecting to {sessionuser} db.")
+        conn = database.create_connection(sessionuser)
 
         # verify db existence
-        if not file.file_exists(f'{config.db_path}/{serveruser}.db'):
-            returnmsg = "1 Error: DB doesn't exist. Client and server init not aligned."
+        if not file.file_exists(f'{config.db_path}/{sessionuser}.db'):
+            returnmsg = "1 Error: DB doesn't exist. Client and server session not aligned."
             print(returnmsg)
             database.close_connection(conn)
             return returnmsg
@@ -276,16 +306,16 @@ def interpret_and_process(base64stringdata):
             print("DB exists.")
 
         # connect db
-        conn = database.create_connection(serveruser)
+        conn = database.create_connection(sessionuser)
 
-        # verify server credentials
-        if not database.credentials_match(conn, serveruser, serverpw):
-            returnmsg = "1 Server credentials don't match DB."
+        # verify session credentials
+        if not database.credentials_match(conn, sessionuser, sessionpw):
+            returnmsg = "1 Session credentials don't match DB."
             print(returnmsg)
             database.close_connection(conn)
             return returnmsg
         else:
-            print("Server credentials match.")
+            print("Session credentials received match server DB.")
 
         # delete exact match
         if database.exact_title_exists(conn, title):
