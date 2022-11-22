@@ -462,16 +462,21 @@ function helptext ()  # Help text diplayed if no or non-existent input parameter
 Run command:
 $ pwmgr (parameter)
 
-Init must be run first to create a session before the other commands can be used. This is the base of the client<->server interaction.
+Init must be run first to create a session before the other commands can be
+used. This is the base of the client<->server interaction.
 
 	COMMANDS:
 
 - init / config
-	Create a session. This creates a local session config and attempts to create a remote server	db session. If the username db already exists, it's reused. Previous session password must match.
-  By entering the same sessionuser/sessionpassword  multiple clients can be used with the same server DB.
+	Create a session. This creates a local session config and attempts to create
+	a remote server	db session. If the username db already exists, it's reused.
+	Previous session password must match.
+  By entering the same sessionuser/sessionpassword  multiple clients can be
+  used with the same server DB.
 
 - init-change / config-change
-	Change credentials of an existing session. Old credentials must be given for verification.
+	Change credentials of an existing session. Old credentials must be given for
+	verification.
 
 - add / encrypt / enc / put / save
 	Add a new record.
@@ -480,10 +485,12 @@ Init must be run first to create a session before the other commands can be used
 	- username
 	- password
 	- Extra field (optional/may be blank)
-	Encryption password selection is prompted. The encryption of the record will be as strong as this password.
+	Encryption password selection is prompted. The encryption of the record will
+	be as strong as this password.
 
 - get / decrypt / dec / fetch / show / load
-	Fetch a stored record to view. Same encryption password as when the record was stored must be entered.
+	Fetch a stored record to view. Same encryption password as when the record
+	 was stored must be entered.
 
 - list / search
 	Search for a record with partial name.
@@ -492,7 +499,9 @@ Init must be run first to create a session before the other commands can be used
 	Delete a record.
 
 - update / change / edit
-	Change a record, e.g. change the password stored. If the name of the record already exists, it's not possible to use "add" to overwrite, but this command must be used instead.
+	Change a record, e.g. change the password stored. If the name of the record
+	already exists, it's not possible to use "add" to overwrite, but this command
+	must be used instead.
 
 END
 }
