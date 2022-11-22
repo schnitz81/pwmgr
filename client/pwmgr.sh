@@ -471,8 +471,8 @@ used. This is the base of the client<->server interaction.
 	Create a session. This creates a local session config and attempts to create
 	a remote server	db session. If the username db already exists, it's reused.
 	Previous session password must match.
-  By entering the same sessionuser/sessionpassword  multiple clients can be
-  used with the same server DB.
+	By entering the same sessionuser/sessionpassword  multiple clients can be
+	used with the same server DB.
 
 - init-change / config-change
 	Change credentials of an existing session. Old credentials must be given for
@@ -490,7 +490,7 @@ used. This is the base of the client<->server interaction.
 
 - get / decrypt / dec / fetch / show / load
 	Fetch a stored record to view. Same encryption password as when the record
-	 was stored must be entered.
+	was stored must be entered.
 
 - list / search
 	Search for a record with partial name.
