@@ -126,7 +126,7 @@ function init-change ()
 		SERVERRESPONSE=$(echo -n "$SERVERRESPONSE" | base64 -d | base64 -d)
 		case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 			1)
-				echo "Server error: $(echo "$SERVERRESPONSE | cut -d ' ' -f 2-")"
+				echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
 				;;
 			2)
 				echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
@@ -153,6 +153,41 @@ function sessioncheck ()
 		echo "No local session found. Please run with init parameter to create one."; exit 1
 	fi
 }
+
+
+function status ()
+{
+	sessioncheck
+	echo "Session status check."
+
+	command="status"
+	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
+	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
+
+	echo ; echo "Fetching record from server."
+	SERVERRESPONSE=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" | base64 | base64 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
+	if [ $? != 0 ]; then
+		echo -n "Server connect error. "
+		echo "$SERVERRESPONSE"
+		exit 1
+	else
+		SERVERRESPONSE=$(echo "$SERVERRESPONSE" | base64 -d | base64 -d)
+		case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
+			1)
+				echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
+				;;
+			2)
+				echo ; echo "Server response OK:"
+				echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
+				;;
+			*)
+				echo "Unknown error:"
+				echo "$SERVERRESPONSE"
+				;;
+		esac
+	fi
+}
+
 
 function add ()
 {
@@ -479,6 +514,9 @@ used. This is the base of the client<->server interaction.
 	Change credentials of an existing session. Old credentials must be given for
 	verification.
 
+- status / check
+  Check session status against the server.
+
 - add / encrypt / enc / put / save
 	Add a new record.
 	Fields stored:
@@ -535,6 +573,10 @@ if [ "$1" == "init" ] || [ "$1" == "config" ]; then
 # init-change parameter input - run init-change procedure
 elif [ "$1" == "init-change" ] || [ "$1" == "config-change" ] || [ "$1" == "configchange" ]; then
 	init-change
+
+# status parameter input - run status procedure
+elif [ "$1" == "status" ] || [ "$1" == "check" ] || [ "$1" == "sessioncheck" ]; then
+	status
 
 # add parameter input - run add procedure
 elif [ "$1" == "add" ] || [ "$1" == "encrypt" ] || [ "$1" == "enc" ] || [ "$1" == "put" ] || [ "$1" == "save" ]; then
