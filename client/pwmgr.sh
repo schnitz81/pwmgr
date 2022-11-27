@@ -225,10 +225,10 @@ function add ()
 
 	# encrypt user and pw
 	title=$(echo "$title" | base64 | base64)
-	username=$(echo "$username" | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 107172 -salt -pass pass:"$encryptionpw")
-	pw=$(echo "$pw" | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 107172 -salt -pass pass:"$encryptionpw")
-	extra=$(echo "$extra" | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 107172 -salt -pass pass:"$encryptionpw")
-	verification=$(echo "verification" | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 107172 -salt -pass pass:"$encryptionpw")
+	username=$(echo "$username" | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 107172 -salt -pass pass:"$encryptionpw" | tr -d "\n")
+	pw=$(echo "$pw" | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 107172 -salt -pass pass:"$encryptionpw" | tr -d "\n")
+	extra=$(echo "$extra" | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 107172 -salt -pass pass:"$encryptionpw" | tr -d "\n")
+	verification=$(echo "verification" | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 107172 -salt -pass pass:"$encryptionpw" | tr -d "\n")
 
 	command="add"
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
@@ -458,10 +458,10 @@ function update ()
 
 	# encrypt user and pw
 	title=$(echo "$title" | base64 | base64)
-	username=$(echo "$username" | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 107172 -salt -pass pass:"$encryptionpw")
-	pw=$(echo "$pw" | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 107172 -salt -pass pass:"$encryptionpw")
-	extra=$(echo "$extra" | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 107172 -salt -pass pass:"$encryptionpw")
-	verification=$(echo "verification" | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 107172 -salt -pass pass:"$encryptionpw")
+	username=$(echo "$username" | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 107172 -salt -pass pass:"$encryptionpw" | tr -d "\n")
+	pw=$(echo "$pw" | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 107172 -salt -pass pass:"$encryptionpw" | tr -d "\n")
+	extra=$(echo "$extra" | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 107172 -salt -pass pass:"$encryptionpw" | tr -d "\n")
+	verification=$(echo "verification" | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 107172 -salt -pass pass:"$encryptionpw" | tr -d "\n")
 
 	command="update"
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
