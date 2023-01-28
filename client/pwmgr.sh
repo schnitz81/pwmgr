@@ -213,15 +213,25 @@ function add ()
 		echo ; echo "Error: session password can't be empty."; exit 1
 	fi
 	echo ; read -p "Extra field (may be blank): " extra
-	echo ; read -s -p "Enter encryption password: " encryptionpw
-	echo ; read -s -p "Repeat encryption password: " encryptionpw2
-	if [ "$encryptionpw" != "$encryptionpw2" ]; then
-		echo ; echo "Error: Encryption passwords don't match."; exit 1
-	elif [ "$encryptionpw" == "$pw" ]; then
-		echo ; echo "Error: Session password and encryption password shouldn't be the same."; exit 1
-	elif [ "$encryptionpw" == '' ]; then
-		echo ; echo "Error: Encryption password can't be empty."; exit 1
-	fi
+	while true; do
+		echo ; read -s -p "Enter encryption password (or quit):" encryptionpw
+		if [ "$encryptionpw" == "q" ] || [ "$encryptionpw" == "Q" ] || [ "$encryptionpw" == "quit" ] || [ "$encryptionpw" == "QUIT" ] || [ "$encryptionpw" == "exit" ] || [ "$encryptionpw" == "EXIT" ]; then
+			echo ; exit 1
+		fi
+		echo ; read -s -p "Repeat encryption password (or quit):" encryptionpw2
+		if [ "$encryptionpw2" == "q" ] || [ "$encryptionpw2" == "Q" ] || [ "$encryptionpw2" == "quit" ] || [ "$encryptionpw2" == "QUIT" ] || [ "$encryptionpw2" == "exit" ] || [ "$encryptionpw2" == "EXIT" ]; then
+			echo ; exit 1
+		fi
+		if [ "$encryptionpw" != "$encryptionpw2" ]; then
+			echo ; echo ; echo "Error: Encryption passwords don't match."
+		elif [ "$encryptionpw" == "$pw" ]; then
+			echo ; echo ; echo "Error: Record password and encryption password shouldn't be the same."
+		elif [ "$encryptionpw" == '' ]; then
+			echo ; echo ; echo "Error: Encryption password can't be empty."
+		else
+			break
+		fi
+	done
 
 	# encrypt user and pw
 	title=$(echo "$title" | base64 | base64)
