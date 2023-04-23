@@ -78,6 +78,7 @@ def store_credentials(conn, sessionuser, sessionpw):
 def store_record(conn, title, username, pw, extra, verification):
     c = conn.cursor()
     try:
+        # replace existing record
         c.execute(f'''REPLACE INTO records (title, username, pw, extra, verification) VALUES ('{title}', '{username}', '{pw}', '{extra}', '{verification}');''')
         return True
     except Exception as store_e:
@@ -91,6 +92,17 @@ def exact_title_exists(conn, title):
         c.execute(f'''SELECT title FROM records WHERE title='{title}' COLLATE NOCASE;''')
         if c.fetchall():
             return True
+        else:
+            return False
+
+
+def get_title_case_spelling(conn, title):
+    c = conn.cursor()
+    with conn:
+        c.execute(f'''SELECT title FROM records WHERE title='{title}' COLLATE NOCASE;''')
+        actualTitle = c.fetchone()[0]
+        if actualTitle:
+            return actualTitle
         else:
             return False
 
