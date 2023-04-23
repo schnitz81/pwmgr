@@ -78,7 +78,6 @@ def store_credentials(conn, sessionuser, sessionpw):
 def store_record(conn, title, username, pw, extra, verification):
     c = conn.cursor()
     try:
-        # replace existing record
         c.execute(f'''REPLACE INTO records (title, username, pw, extra, verification) VALUES ('{title}', '{username}', '{pw}', '{extra}', '{verification}');''')
         return True
     except Exception as store_e:
