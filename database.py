@@ -95,6 +95,17 @@ def exact_title_exists(conn, title):
             return False
 
 
+def get_title_case_spelling(conn, title):
+    c = conn.cursor()
+    with conn:
+        c.execute(f'''SELECT title FROM records WHERE title='{title}' COLLATE NOCASE;''')
+        actualTitle = c.fetchone()[0]
+        if actualTitle:
+            return actualTitle
+        else:
+            return False
+
+
 def nbr_of_title_hits(conn, title):
     c = conn.cursor()
     with conn:

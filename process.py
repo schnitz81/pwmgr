@@ -192,25 +192,29 @@ def interpret_and_process(base64stringdata):
         # avoid overwrite when add command is used
         if database.exact_title_exists(conn, title) and command != 'update':
             returnmsg = "1 Error: Record already exists. Use update to overwrite/change record."
-            print(returnmsg)
-            database.close_connection(conn)
-            return returnmsg
-        # don't create new record with update command
+
+        # don't create new record with update command if record is missing
         elif not database.exact_title_exists(conn, title) and command == 'update':
             returnmsg = "1 Error: Record not found. Unable to update. Specify exact name to update."
-            print(returnmsg)
-            database.close_connection(conn)
-            return returnmsg
 
-        # store record
-        record_stored = database.store_record(conn, title, username, pw, extra, verification)
-        if record_stored:
-            if command == 'add':  # return message depending on command used
-                returnmsg = "2 Record stored in DB successfully."
-            else:  # update command used
-                returnmsg = "2 Record updated in DB successfully."
         else:
-            returnmsg = "1 Error: Record storing unsuccessful."
+            # get exact title case spelling when using update
+            if database.exact_title_exists(conn, title) and command == 'update':
+                title = database.get_title_case_spelling(conn, title)
+
+            if not title:  # not able to check title case spelling
+                returnmsg = "1 Error: Record storing unsuccessful. Unable to get title case spelling."
+
+            # store record
+            else:
+                record_stored = database.store_record(conn, title, username, pw, extra, verification)
+                if record_stored:
+                    if command == 'add':  # return message depending on command used
+                        returnmsg = "2 Record stored in DB successfully."
+                    else:  # update command used
+                        returnmsg = "2 Record updated in DB successfully."
+                else:
+                    returnmsg = "1 Error: Record storing unsuccessful."
         print(returnmsg)
         database.close_connection(conn)
         return returnmsg
