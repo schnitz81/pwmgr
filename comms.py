@@ -2,6 +2,16 @@ import socket
 import config
 import process
 import base64
+import bruteforcecheck
+
+
+FAILSTRINGS = [
+    "password is wrong",
+    "credentials wrong",
+    "credentials don't match",
+    "DB doesn't exist"
+]
+
 
 def tcp_listen_and_reply():
 
@@ -25,12 +35,21 @@ def tcp_listen_and_reply():
     print("------------------------------------")
     print("connection from:", str(addr))
 
-    data = c.recv(4096)
-    stringdata = data.decode('utf-8')
+    # check IP ban
+    if not bruteforcecheck.is_allowed_to_login(addr[0]):
+        returnmsg = "1 Error: Client IP banned."
+    else:
+        data = c.recv(4096)
+        stringdata = data.decode('utf-8')
 
-    # remove newline from input data
-    base64stringdata = stringdata.rstrip()
-    returnmsg = process.interpret_and_process(base64stringdata)
+        # remove newline from input data
+        base64stringdata = stringdata.rstrip()
+        returnmsg = process.interpret_and_process(base64stringdata)
+
+        # add to failed login list if credentials are wrong
+        for i in range(len(FAILSTRINGS)):
+            if FAILSTRINGS[i] in returnmsg:
+                bruteforcecheck.failed_auth(addr[0])
 
     try:
         returnmsg = base64.b64encode(base64.b64encode(returnmsg.encode("utf-8")))
