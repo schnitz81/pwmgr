@@ -42,7 +42,7 @@ function init ()
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
 	SERVERRESPONSE=$(echo "${command}" "${sessionuser}" "${sessionpw}" | base64 | base64 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	if [ $? != 0 ]; then
-		echo -n "Server connect error. "
+		echo -n "Connect error. "
 		echo "$SERVERRESPONSE"
 		exit 1
 	else
@@ -119,7 +119,7 @@ function init-change ()
 	command="init-change"
 	SERVERRESPONSE=$(echo "${command}" "${sessionuser}" "${sessionpw}" "${sessionnewuser}" "${sessionnewpw}" | base64 | base64 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH.tmp")" $PORT)
 	if [ $? != 0 ]; then
-		echo -n "Server connect error. "
+		echo -n "Connect error. "
 		echo "$SERVERRESPONSE"
 		exit 1
 	else
@@ -164,10 +164,10 @@ function status ()
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
 
-	echo ; echo "Fetching record from server."
+	echo ; echo "Fetching record..."
 	SERVERRESPONSE=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" | base64 | base64 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	if [ $? != 0 ]; then
-		echo -n "Server connect error. "
+		echo -n "Connect error. "
 		echo "$SERVERRESPONSE"
 		exit 1
 	else
@@ -244,10 +244,10 @@ function add ()
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
 
-	echo ; echo "Adding record to server." ; echo
+	echo ; echo "Adding record..." ; echo
 	SERVERRESPONSE=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" "${username}" "${pw}" "${extra}" "${verification}" | base64 | base64 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	if [ $? != 0 ]; then
-		echo -n "Server connect error. "
+		echo -n "Connect error. "
 		echo "$SERVERRESPONSE"
 		exit 1
 	else
@@ -288,10 +288,10 @@ function get ()
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
 
-	echo ; echo "Fetching record from server."
+	echo ; echo "Fetching record..."
 	SERVERRESPONSE=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" | base64 | base64 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	if [ $? != 0 ]; then
-		echo -n "Server connect error. "
+		echo -n "Connect error. "
 		echo "$SERVERRESPONSE"
 		exit 1
 	else
@@ -356,10 +356,10 @@ function list ()
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
 
-	echo ; echo "Fetching record from server."
+	echo ; echo "Fetching records..."
 	SERVERRESPONSE=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" | base64 | base64 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	if [ $? != 0 ]; then
-		echo -n "Server connect error. "
+		echo -n "Connect error. "
 		echo "$SERVERRESPONSE"
 		exit 1
 	else
@@ -405,10 +405,10 @@ function delete ()
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
 
-	echo ; echo "Fetching record from server."
+	echo ; echo "Fetching record..."
 	SERVERRESPONSE=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" | base64 | base64 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	if [ $? != 0 ]; then
-		echo -n "Server connect error. "
+		echo -n "Connect error. "
 		echo "$SERVERRESPONSE"
 		exit 1
 	else
@@ -481,10 +481,10 @@ function update ()
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
 
-	echo ; echo "Adding record to server." ; echo
+	echo ; echo "Adding record..." ; echo
 	SERVERRESPONSE=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" "${username}" "${pw}" "${extra}" "${verification}" | base64 | base64 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	if [ $? != 0 ]; then
-		echo -n "Server connect error. "
+		echo -n "Connect error. "
 		echo "$SERVERRESPONSE"
 		exit 1
 	else
