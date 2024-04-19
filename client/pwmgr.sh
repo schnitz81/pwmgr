@@ -164,7 +164,7 @@ function status ()
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
 
-	echo ; echo "Fetching record..."
+	echo ; echo "Checking status..."
 	SERVERRESPONSE=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" | base64 | base64 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	if [ $? != 0 ]; then
 		echo -n "Connect error. "
@@ -442,7 +442,7 @@ function update ()
 	if [[ $nbrOfParams -gt 1 ]] ; then
 		echo ; echo "Input title is \""$title"\""
 	else
-		echo ; read -p "Name/site/title to delete: " title
+		echo ; read -p "Name/site/title to update: " title
 	fi
 	if [[ -z "$title" ]]; then
 		echo "Name can't be blank."
