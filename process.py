@@ -59,6 +59,7 @@ def interpret_and_process(base64stringdata):
         database.close_connection(conn)
         return returnmsg
 
+
     ### init-change ############################################################################################
     elif command == 'init-change':
         try:
@@ -153,6 +154,7 @@ def interpret_and_process(base64stringdata):
         database.close_connection(conn)
         print(returnmsg)
         return returnmsg
+
 
     ### add | update #####################################################################################
     elif command == 'add' or command == 'update':
