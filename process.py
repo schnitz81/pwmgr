@@ -2,6 +2,7 @@ import base64
 import database
 import file
 import config
+import zlib
 
 
 def interpret_and_process(base64stringdata):
@@ -14,19 +15,26 @@ def interpret_and_process(base64stringdata):
         returnmsg = "1 Invalid base64 data to decode."
         return returnmsg
 
-    print(debaseddata2)
+    # decompress and convert to string
+    try:
+        decompresseddata = zlib.decompress(debaseddata2, wbits=zlib.MAX_WBITS | 16)
+        decompresseddata = decompresseddata.decode('utf-8')
+    except Exception as decompresserror:
+        print(f"Error: Unable to decompress debase64:d data: {decompresserror}")
+        returnmsg = "1 Decompress error."
+        return returnmsg
 
-    debaseddata2 = debaseddata2.decode('utf8')
+    print(decompresseddata)
 
     # interpret received command
-    command = debaseddata2.split(' ')[0]
+    command = decompresseddata.split(' ')[0]
 
 
     ### init ############################################################################################
     if command == 'init':
         try:
-            sessionuser = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[1])).decode('utf8').rstrip()
-            sessionpw = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[2])).decode('utf8').rstrip()
+            sessionuser = base64.b64decode(base64.b64decode(decompresseddata.split(' ')[1])).decode('utf8').rstrip()
+            sessionpw = base64.b64decode(base64.b64decode(decompresseddata.split(' ')[2])).decode('utf8').rstrip()
         except Exception as b64decodeerror:
             print(f"Error: Unable to decode base64 data: {b64decodeerror}")
             returnmsg = "1 Invalid base64 data to decode."
@@ -63,10 +71,10 @@ def interpret_and_process(base64stringdata):
     ### init-change ############################################################################################
     elif command == 'init-change':
         try:
-            sessionuser = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[1])).decode('utf8').rstrip()
-            sessionpw = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[2])).decode('utf8').rstrip()
-            sessionnewuser = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[3])).decode('utf8').rstrip()
-            sessionnewpw = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[4])).decode('utf8').rstrip()
+            sessionuser = base64.b64decode(base64.b64decode(decompresseddata.split(' ')[1])).decode('utf8').rstrip()
+            sessionpw = base64.b64decode(base64.b64decode(decompresseddata.split(' ')[2])).decode('utf8').rstrip()
+            sessionnewuser = base64.b64decode(base64.b64decode(decompresseddata.split(' ')[3])).decode('utf8').rstrip()
+            sessionnewpw = base64.b64decode(base64.b64decode(decompresseddata.split(' ')[4])).decode('utf8').rstrip()
         except Exception as b64decodeerror:
             print(f"Error: Unable to decode base64 data: {b64decodeerror}")
             returnmsg = "1 Invalid base64 data to decode."
@@ -128,8 +136,8 @@ def interpret_and_process(base64stringdata):
     ### status ##########################################################################################
     elif command == 'status':
         try:
-            sessionuser = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[1])).decode('utf8').rstrip()
-            sessionpw = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[2])).decode('utf8').rstrip()
+            sessionuser = base64.b64decode(base64.b64decode(decompresseddata.split(' ')[1])).decode('utf8').rstrip()
+            sessionpw = base64.b64decode(base64.b64decode(decompresseddata.split(' ')[2])).decode('utf8').rstrip()
         except Exception as b64decodeerror:
             print(f"Error: Unable to decode base64 data: {b64decodeerror}")
             returnmsg = "1 Invalid base64 data to decode."
@@ -159,17 +167,17 @@ def interpret_and_process(base64stringdata):
     ### add | update #####################################################################################
     elif command == 'add' or command == 'update':
         try:
-            sessionuser = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[1])).decode('utf8').rstrip()
-            sessionpw = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[2])).decode('utf8').rstrip()
-            title = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[3])).decode('utf8').rstrip()
+            sessionuser = base64.b64decode(base64.b64decode(decompresseddata.split(' ')[1])).decode('utf8').rstrip()
+            sessionpw = base64.b64decode(base64.b64decode(decompresseddata.split(' ')[2])).decode('utf8').rstrip()
+            title = base64.b64decode(base64.b64decode(decompresseddata.split(' ')[3])).decode('utf8').rstrip()
         except Exception as b64decodeerror:
             print(f"Error: Unable to decode base64 data: {b64decodeerror}")
             returnmsg = "1 Invalid base64 data to decode."
             return returnmsg
-        username = debaseddata2.split(' ')[4]
-        pw = debaseddata2.split(' ')[5]
-        extra = debaseddata2.split(' ')[6]
-        verification = debaseddata2.split(' ')[7]
+        username = decompresseddata.split(' ')[4]
+        pw = decompresseddata.split(' ')[5]
+        extra = decompresseddata.split(' ')[6]
+        verification = decompresseddata.split(' ')[7]
 
         # verify db existence
         if not file.file_exists(f'{config.db_path}/{sessionuser}.db'):
@@ -225,13 +233,13 @@ def interpret_and_process(base64stringdata):
     ### get ############################################################################################
     elif command == 'get':
         try:
-            sessionuser = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[1])).decode('utf8').rstrip()
-            sessionpw = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[2])).decode('utf8').rstrip()
+            sessionuser = base64.b64decode(base64.b64decode(decompresseddata.split(' ')[1])).decode('utf8').rstrip()
+            sessionpw = base64.b64decode(base64.b64decode(decompresseddata.split(' ')[2])).decode('utf8').rstrip()
         except Exception as b64decodeerror:
             print(f"Error: Unable to decode base64 data: {b64decodeerror}")
             returnmsg = "1 Invalid base64 data to decode."
             return returnmsg
-        title = debaseddata2.split(' ')[3]
+        title = decompresseddata.split(' ')[3]
 
         # verify db existence
         if not file.file_exists(f'{config.db_path}/{sessionuser}.db'):
@@ -272,13 +280,13 @@ def interpret_and_process(base64stringdata):
     ### list ############################################################################################
     elif command == 'list':
         try:
-            sessionuser = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[1])).decode('utf8').rstrip()
-            sessionpw = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[2])).decode('utf8').rstrip()
+            sessionuser = base64.b64decode(base64.b64decode(decompresseddata.split(' ')[1])).decode('utf8').rstrip()
+            sessionpw = base64.b64decode(base64.b64decode(decompresseddata.split(' ')[2])).decode('utf8').rstrip()
         except Exception as b64decodeerror:
             print(f"Error: Unable to decode base64 data: {b64decodeerror}")
             returnmsg = "1 Invalid base64 data to decode."
             return returnmsg
-        title = debaseddata2.split(' ')[3]
+        title = decompresseddata.split(' ')[3]
 
         # verify db existence
         if not file.file_exists(f'{config.db_path}/{sessionuser}.db'):
@@ -316,13 +324,13 @@ def interpret_and_process(base64stringdata):
     ### delete ############################################################################################
     elif command == 'delete':
         try:
-            sessionuser = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[1])).decode('utf8').rstrip()
-            sessionpw = base64.b64decode(base64.b64decode(debaseddata2.split(' ')[2])).decode('utf8').rstrip()
+            sessionuser = base64.b64decode(base64.b64decode(decompresseddata.split(' ')[1])).decode('utf8').rstrip()
+            sessionpw = base64.b64decode(base64.b64decode(decompresseddata.split(' ')[2])).decode('utf8').rstrip()
         except Exception as b64decodeerror:
             print(f"Error: Unable to decode base64 data: {b64decodeerror}")
             returnmsg = "1 Invalid base64 data to decode."
             return returnmsg
-        title = debaseddata2.split(' ')[3]
+        title = decompresseddata.split(' ')[3]
 
         # verify db existence
         if not file.file_exists(f'{config.db_path}/{sessionuser}.db'):
