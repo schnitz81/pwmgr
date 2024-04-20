@@ -40,13 +40,13 @@ function init ()
 	command="init"
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
-	SERVERRESPONSE=$(echo "${command}" "${sessionuser}" "${sessionpw}" | base64 | base64 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
+	SERVERRESPONSE=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" | gzip -1f | base64 -w0 | base64 -w0 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	if [ $? != 0 ]; then
 		echo -n "Connect error. "
 		echo "$SERVERRESPONSE"
 		exit 1
 	else
-		SERVERRESPONSE=$(echo -n "$SERVERRESPONSE" | base64 -d | base64 -d)
+		SERVERRESPONSE=$(echo -n "$SERVERRESPONSE" | base64 -d | base64 -d | gunzip -f)
 		case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 			1)
 				echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
@@ -117,13 +117,13 @@ function init-change ()
 	# align session with server and create a new user table if non-existent
 	echo "Syncing server."
 	command="init-change"
-	SERVERRESPONSE=$(echo "${command}" "${sessionuser}" "${sessionpw}" "${sessionnewuser}" "${sessionnewpw}" | base64 | base64 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH.tmp")" $PORT)
+	SERVERRESPONSE=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${sessionnewuser}" "${sessionnewpw}" | gzip -1f | base64 -w0 | base64 -w0 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH.tmp")" $PORT)
 	if [ $? != 0 ]; then
 		echo -n "Connect error. "
 		echo "$SERVERRESPONSE"
 		exit 1
 	else
-		SERVERRESPONSE=$(echo -n "$SERVERRESPONSE" | base64 -d | base64 -d)
+		SERVERRESPONSE=$(echo -n "$SERVERRESPONSE" | base64 -d | base64 -d | gunzip -f)
 		case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 			1)
 				echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
@@ -165,13 +165,13 @@ function status ()
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
 
 	echo ; echo "Checking status..."
-	SERVERRESPONSE=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" | base64 | base64 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
+	SERVERRESPONSE=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" | gzip -1f | base64 -w0 | base64 -w0 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	if [ $? != 0 ]; then
 		echo -n "Connect error. "
 		echo "$SERVERRESPONSE"
 		exit 1
 	else
-		SERVERRESPONSE=$(echo "$SERVERRESPONSE" | base64 -d | base64 -d)
+		SERVERRESPONSE=$(echo "$SERVERRESPONSE" | base64 -d | base64 -d | gunzip -f)
 		case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 			1)
 				echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
@@ -245,13 +245,13 @@ function add ()
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
 
 	echo ; echo "Adding record..." ; echo
-	SERVERRESPONSE=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" "${username}" "${pw}" "${extra}" "${verification}" | base64 | base64 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
+	SERVERRESPONSE=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" "${username}" "${pw}" "${extra}" "${verification}" | gzip -1f | base64 -w0 | base64 -w0 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	if [ $? != 0 ]; then
 		echo -n "Connect error. "
 		echo "$SERVERRESPONSE"
 		exit 1
 	else
-		SERVERRESPONSE=$(echo "$SERVERRESPONSE" | base64 -d | base64 -d)
+		SERVERRESPONSE=$(echo "$SERVERRESPONSE" | base64 -d | base64 -d | gunzip -f)
 		case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 			1)
 				echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
@@ -289,13 +289,13 @@ function get ()
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
 
 	echo ; echo "Fetching record..."
-	SERVERRESPONSE=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" | base64 | base64 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
+	SERVERRESPONSE=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" | gzip -1f | base64 -w0 | base64 -w0 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	if [ $? != 0 ]; then
 		echo -n "Connect error. "
 		echo "$SERVERRESPONSE"
 		exit 1
 	else
-		SERVERRESPONSE=$(echo "$SERVERRESPONSE" | base64 -d | base64 -d)
+		SERVERRESPONSE=$(echo "$SERVERRESPONSE" | base64 -d | base64 -d | gunzip -f)
 		case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 			1)
 				echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
@@ -357,13 +357,13 @@ function list ()
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
 
 	echo ; echo "Fetching records..."
-	SERVERRESPONSE=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" | base64 | base64 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
+	SERVERRESPONSE=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" | gzip -1f | base64 -w0 | base64 -w0 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	if [ $? != 0 ]; then
 		echo -n "Connect error. "
 		echo "$SERVERRESPONSE"
 		exit 1
 	else
-		SERVERRESPONSE=$(echo "$SERVERRESPONSE" | base64 -d | base64 -d)
+		SERVERRESPONSE=$(echo "$SERVERRESPONSE" | base64 -d | base64 -d | gunzip -f)
 		case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 			1)
 				echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
@@ -406,13 +406,13 @@ function delete ()
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
 
 	echo ; echo "Fetching record..."
-	SERVERRESPONSE=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" | base64 | base64 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
+	SERVERRESPONSE=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" | gzip -1f | base64 -w0 | base64 -w0 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	if [ $? != 0 ]; then
 		echo -n "Connect error. "
 		echo "$SERVERRESPONSE"
 		exit 1
 	else
-		SERVERRESPONSE=$(echo "$SERVERRESPONSE" | base64 -d | base64 -d)
+		SERVERRESPONSE=$(echo "$SERVERRESPONSE" | base64 -d | base64 -d | gunzip -f)
 		case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 			1)
 				echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
@@ -482,13 +482,13 @@ function update ()
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
 
 	echo ; echo "Adding record..." ; echo
-	SERVERRESPONSE=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" "${username}" "${pw}" "${extra}" "${verification}" | base64 | base64 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
+	SERVERRESPONSE=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" "${username}" "${pw}" "${extra}" "${verification}" | gzip -1f | base64 -w0 | base64 -w0 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	if [ $? != 0 ]; then
 		echo -n "Connect error. "
 		echo "$SERVERRESPONSE"
 		exit 1
 	else
-		SERVERRESPONSE=$(echo "$SERVERRESPONSE" | base64 -d | base64 -d)
+		SERVERRESPONSE=$(echo "$SERVERRESPONSE" | base64 -d | base64 -d | gunzip -f)
 		case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 			1)
 				echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
