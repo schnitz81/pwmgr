@@ -318,7 +318,7 @@ function get ()
 				echo "title: $title"
 				echo "username: $username"
 				echo -n "password (hidden): "
-				tput setaf 0 ; tput setb 0  # hide password
+				tput setaf 0 ; tput setb 0 ; tput setab 0  # hide password
 				echo -n "$pw"
 				tput sgr0  # reset terminal back to normal colors
 				echo  # new line after terminal color reset
