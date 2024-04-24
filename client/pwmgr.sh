@@ -208,7 +208,7 @@ function add ()
 	echo ; read -s -p "Enter password: " pw
 	echo ; read -s -p "Repeat password: " pw2
 	if [ "$pw" != "$pw2" ]; then
-		echo "Error: passwords don't match."; exit 1
+		echo ; echo "Error: passwords don't match."; exit 1
 	elif [ "$pw" == '' ]; then
 		echo ; echo "Error: session password can't be empty."; exit 1
 	fi
@@ -405,7 +405,7 @@ function delete ()
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
 
-	echo ; echo "Fetching record..."
+	echo ; echo "Deleting record..."
 	SERVERRESPONSE=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" | gzip -1f | base64 -w0 | base64 -w0 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	if [ $? != 0 ]; then
 		echo -n "Connect error. "
@@ -455,7 +455,7 @@ function update ()
 	echo ; read -s -p "Enter NEW password: " pw
 	echo ; read -s -p "Repeat NEW password: " pw2
 	if [ "$pw" != "$pw2" ]; then
-		echo "Error: passwords don't match."; exit 1
+		echo ; echo "Error: passwords don't match."; exit 1
 	elif [ "$pw" == '' ]; then
 		echo ; echo "Error: session password can't be empty."; exit 1
 	fi
@@ -481,7 +481,7 @@ function update ()
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
 
-	echo ; echo "Adding record..." ; echo
+	echo ; echo "Updating record..." ; echo
 	SERVERRESPONSE=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" "${username}" "${pw}" "${extra}" "${verification}" | gzip -1f | base64 -w0 | base64 -w0 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	if [ $? != 0 ]; then
 		echo -n "Connect error. "
@@ -510,7 +510,7 @@ function helptext ()  # Help text diplayed if no or non-existent input parameter
 {
 	cat <<'END'
 Run command:
-$ pwmgr (parameter)
+$ pwmgr (parameter) [(title)]
 
 Init must be run first to create a session before the other commands can be
 used. This is the base of the client<->server interaction.
@@ -577,6 +577,12 @@ fi
 # check if openssl is installed
 if [ -z "$(which openssl)" ] ; then
 	echo "openssl not found."
+	exit 1
+fi
+
+# check if gzip is installed
+if [ -z "$(which gzip)" ] ; then
+	echo "gzip not found."
 	exit 1
 fi
 
