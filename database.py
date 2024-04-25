@@ -124,6 +124,16 @@ def list_partial_title_records(conn, title):
         return strlist
 
 
+def list_all_title_records(conn, title):
+    c = conn.cursor()
+    with conn:
+        c.execute(f'''SELECT title FROM records;''')
+        dbvals = c.fetchall()
+        strlist = ' '.join(map(','.join, dbvals))
+        print(strlist)
+        return strlist
+
+
 def get_record(conn, title):
     c = conn.cursor()
     with conn:
