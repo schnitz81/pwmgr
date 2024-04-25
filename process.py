@@ -199,8 +199,16 @@ def interpret_and_process(base64stringdata):
         else:
             print("Session credentials received match server DB.")
 
+        # if letter is missing in title
+        if not any(c.isalpha() for c in title):
+            returnmsg = "1 Error: Invalid title name. At least one letter is required."
+
+        # "all" is reserved.
+        elif title.casefold() == "all":
+            returnmsg = "1 Error: Invalid title name. \"ALL\" is reserved."
+
         # avoid overwrite when add command is used
-        if database.exact_title_exists(conn, title) and command != 'update':
+        elif database.exact_title_exists(conn, title) and command != 'update':
             returnmsg = "1 Error: Record already exists. Use update to overwrite/change record."
 
         # don't create new record with update command if record is missing
@@ -235,11 +243,11 @@ def interpret_and_process(base64stringdata):
         try:
             sessionuser = base64.b64decode(base64.b64decode(decompresseddata.split(' ')[1])).decode('utf8').rstrip()
             sessionpw = base64.b64decode(base64.b64decode(decompresseddata.split(' ')[2])).decode('utf8').rstrip()
+            title = base64.b64decode(base64.b64decode(decompresseddata.split(' ')[3])).decode('utf8').rstrip()
         except Exception as b64decodeerror:
             print(f"Error: Unable to decode base64 data: {b64decodeerror}")
             returnmsg = "1 Invalid base64 data to decode."
             return returnmsg
-        title = decompresseddata.split(' ')[3]
 
         # verify db existence
         if not file.file_exists(f'{config.db_path}/{sessionuser}.db'):
@@ -261,8 +269,12 @@ def interpret_and_process(base64stringdata):
         else:
             print("Session credentials received match server DB.")
 
+        # if letter is missing in title
+        if not any(c.isalpha() for c in title):
+            returnmsg = "1 Error: Invalid title name. At least one letter is required."
+
         # get record, exact match or multimatch suggestions
-        if database.exact_title_exists(conn, title):
+        elif database.exact_title_exists(conn, title):
             record = database.get_record(conn, title)
             returnmsg = f"2 {record}"
         elif database.nbr_of_title_hits(conn, title) >= 1:
@@ -282,11 +294,11 @@ def interpret_and_process(base64stringdata):
         try:
             sessionuser = base64.b64decode(base64.b64decode(decompresseddata.split(' ')[1])).decode('utf8').rstrip()
             sessionpw = base64.b64decode(base64.b64decode(decompresseddata.split(' ')[2])).decode('utf8').rstrip()
+            title = base64.b64decode(base64.b64decode(decompresseddata.split(' ')[3])).decode('utf8').rstrip()
         except Exception as b64decodeerror:
             print(f"Error: Unable to decode base64 data: {b64decodeerror}")
             returnmsg = "1 Invalid base64 data to decode."
             return returnmsg
-        title = decompresseddata.split(' ')[3]
 
         # verify db existence
         if not file.file_exists(f'{config.db_path}/{sessionuser}.db'):
@@ -308,8 +320,17 @@ def interpret_and_process(base64stringdata):
         else:
             print("Session credentials received match server DB.")
 
+        # if letter is missing in title
+        if not any(c.isalpha() for c in title):
+            returnmsg = "1 Error: Invalid title name. At least one letter is required."
+
+        # if list all is requested
+        elif title.casefold() == 'all'.casefold():
+            records = database.list_all_title_records(conn, title)
+            returnmsg = f"3 {records}"
+
         # always get multimatch suggestions
-        if database.nbr_of_title_hits(conn, title) >= 1:
+        elif database.nbr_of_title_hits(conn, title) >= 1:
             records = database.list_partial_title_records(conn, title)
             returnmsg = f"3 {records}"
         elif database.nbr_of_title_hits(conn, title) < 1:
@@ -326,11 +347,11 @@ def interpret_and_process(base64stringdata):
         try:
             sessionuser = base64.b64decode(base64.b64decode(decompresseddata.split(' ')[1])).decode('utf8').rstrip()
             sessionpw = base64.b64decode(base64.b64decode(decompresseddata.split(' ')[2])).decode('utf8').rstrip()
+            title = base64.b64decode(base64.b64decode(decompresseddata.split(' ')[3])).decode('utf8').rstrip()
         except Exception as b64decodeerror:
             print(f"Error: Unable to decode base64 data: {b64decodeerror}")
             returnmsg = "1 Invalid base64 data to decode."
             return returnmsg
-        title = decompresseddata.split(' ')[3]
 
         # verify db existence
         if not file.file_exists(f'{config.db_path}/{sessionuser}.db'):
@@ -352,8 +373,12 @@ def interpret_and_process(base64stringdata):
         else:
             print("Session credentials received match server DB.")
 
+        # if letter is missing in title
+        if not any(c.isalpha() for c in title):
+            returnmsg = "1 Error: Invalid title name. At least one letter is required."
+
         # delete exact match
-        if database.exact_title_exists(conn, title):
+        elif database.exact_title_exists(conn, title):
             record_deleted = database.delete_record(conn, title)
             if record_deleted:
                 returnmsg = f"2 Record deleted."

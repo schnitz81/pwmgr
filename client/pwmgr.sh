@@ -285,6 +285,7 @@ function get ()
 	fi
 
 	command="get"
+	title=$(echo "$title" | base64 | base64)
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
 
@@ -353,6 +354,7 @@ function list ()
 	fi
 
 	command="list"
+	title=$(echo "$title" | base64 | base64)
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
 
@@ -402,6 +404,7 @@ function delete ()
 	fi
 
 	command="delete"
+	title=$(echo "$title" | base64 | base64)
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
 
@@ -531,7 +534,7 @@ used. This is the base of the client<->server interaction.
 - status / check
   Check session status against the server.
 
-- add / encrypt / enc / put / save
+- add / encrypt / enc / put / save [(title)]
 	Add a new record.
 	Fields stored:
 	- Title/Name
@@ -541,14 +544,14 @@ used. This is the base of the client<->server interaction.
 	Encryption password selection is prompted. The encryption of the record will
 	be as strong as this password.
 
-- get / decrypt / dec / fetch / show / load
+- get / decrypt / dec / fetch / show / load [(title)]
 	Fetch a stored record to view. Same encryption password as when the record
 	was stored must be entered.
 
-- list / search
-	Search for a record with partial name.
+- list / search [(title)]/[all]
+	Search for a record with partial name. Searching for "all" will list all records in DB.
 
-- delete / remove / del
+- delete / remove / del [(title)]
 	Delete a record.
 
 - update / change / edit
