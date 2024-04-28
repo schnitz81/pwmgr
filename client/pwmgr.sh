@@ -4,18 +4,42 @@ PORT=48222
 SESSIONPATH="$HOME/.config/pwmgr/.session"
 
 
+function response_valid() {
+	local nc_err=$1
+	local response=$2
+	if [[ $nc_err -ne 0 ]]; then
+		echo "Error: Connection error. Err code: $nc_err  Response string: $response"
+	elif [ -z "$response" ]; then
+		echo "Error: Server response empty."; exit 1
+	elif [ "$(echo $response | wc -m)" -lt 5 ]; then
+		echo "Error: Server response data too short: $response"; exit 1
+	elif [[ "$(echo -n $response | base64 -d 2>&1)" =~ "invalid" ]]; then
+		echo "Error: Server response is not valid base64 encoding: $response"; exit 1
+	fi
+}
+
+
 function b64swap() {
-  # charswap b64
+	# charswap b64
 	local str=$1
 	if [ "$(echo $str | wc -m)" -lt 4 ]; then
-    echo "Error: b64 string too short to swap."; exit 1
-  fi
+		echo "Error: b64 string too short to swap."; exit 1
+	fi
 	local c1="${str:0:1}"
 	local c2="${str:1:1}"
 	local c3="${str:2:1}"
 	local endstr="${str:3}"
 	local generated_str="${c1}${c3}${c2}${endstr}"
 	echo -n "$generated_str"
+}
+
+
+decode_response() {
+	local response=$1
+	local unswapped_serverresponse=$(echo "$response" | base64 -d)
+	local swapped_serverresponse=$(b64swap "$unswapped_serverresponse")
+	local uncompressed_response=$(echo "$swapped_serverresponse" | base64 -d | gunzip -f)
+	echo "$uncompressed_response"
 }
 
 
@@ -58,29 +82,23 @@ function init ()
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
 	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" | gzip -1f | base64 -w0)
 	swapped_b64=$(b64swap "$unswapped_b64")
-	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
-	if [ $? != 0 ]; then
-		echo -n "Connect error. "
-		echo "$SERVERRESPONSE"
-		exit 1
-	else
-		unswapped_serverresponse=$(echo "$SERVERRESPONSE" | base64 -d)
-		swapped_serverresponse=$(b64swap "$unswapped_serverresponse")
-		SERVERRESPONSE=$(echo "$swapped_serverresponse" | base64 -d | gunzip -f)
-		case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
-			1)
-				echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
-				;;
-			2)
-				echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
-				echo "Local session and remote server DB aligned successfully."
-				;;
-			*)
-				echo "Unknown error:"
-				echo "$SERVERRESPONSE"
-				;;
-		esac
-	fi
+	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
+	response_valid $? $SERVERRESPONSE
+	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
+
+	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
+		1)
+			echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
+			;;
+		2)
+			echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
+			echo "Local session and remote server DB aligned successfully."
+			;;
+		*)
+			echo "Unknown error:"
+			echo "$SERVERRESPONSE"
+			;;
+	esac
 }
 
 
@@ -140,35 +158,29 @@ function init-change ()
 	command="init-change"
 	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${sessionnewuser}" "${sessionnewpw}" | gzip -1f | base64 -w0)
 	swapped_b64=$(b64swap "$unswapped_b64")
-	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH.tmp")" $PORT)
-	if [ $? != 0 ]; then
-		echo -n "Connect error. "
-		echo "$SERVERRESPONSE"
-		exit 1
-	else
-    unswapped_serverresponse=$(echo "$SERVERRESPONSE" | base64 -d)
-		swapped_serverresponse=$(b64swap "$unswapped_serverresponse")
-		SERVERRESPONSE=$(echo "$swapped_serverresponse" | base64 -d | gunzip -f)
-		case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
-			1)
-				echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
-				;;
-			2)
-				echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
-				echo "Updating local session."
-				mv "$SESSIONPATH.tmp" "$SESSIONPATH"
-				if [ $? != 0 ]; then
-					echo "Error: Local session replacement unsuccessful."
-					exit 1
-				fi
-				echo "Local session and remote server DB aligned successfully."
-				;;
-			*)
-				echo "Unknown error:"
-				echo "$SERVERRESPONSE"
-				;;
-		esac
-	fi
+	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -N -w 5 "$(head -n 1 "$SESSIONPATH.tmp")" $PORT)
+	response_valid $? $SERVERRESPONSE
+	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
+
+	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
+		1)
+			echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
+			;;
+		2)
+			echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
+			echo "Updating local session."
+			mv "$SESSIONPATH.tmp" "$SESSIONPATH"
+			if [ $? != 0 ]; then
+				echo "Error: Local session replacement unsuccessful."
+				exit 1
+			fi
+			echo "Local session and remote server DB aligned successfully."
+			;;
+		*)
+			echo "Unknown error:"
+			echo "$SERVERRESPONSE"
+			;;
+	esac
 }
 
 
@@ -192,29 +204,23 @@ function status ()
 	echo ; echo "Checking status..."
 	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" | gzip -1f | base64 -w0)
 	swapped_b64=$(b64swap "$unswapped_b64")
-	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
-	if [ $? != 0 ]; then
-		echo -n "Connect error. "
-		echo "$SERVERRESPONSE"
-		exit 1
-	else
-    unswapped_serverresponse=$(echo "$SERVERRESPONSE" | base64 -d)
-    swapped_serverresponse=$(b64swap "$unswapped_serverresponse")
-    SERVERRESPONSE=$(echo "$swapped_serverresponse" | base64 -d | gunzip -f)
-		case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
-			1)
-				echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
-				;;
-			2)
-				echo ; echo "Server response OK:"
-				echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
-				;;
-			*)
-				echo "Unknown error:"
-				echo "$SERVERRESPONSE"
-				;;
-		esac
-	fi
+	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
+	response_valid $? $SERVERRESPONSE
+	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
+
+	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
+		1)
+			echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
+			;;
+		2)
+			echo ; echo "Server response OK:"
+			echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
+			;;
+		*)
+			echo "Unknown error:"
+			echo "$SERVERRESPONSE"
+			;;
+	esac
 }
 
 
@@ -276,29 +282,23 @@ function add ()
 	echo ; echo "Adding record..." ; echo
 	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" "${username}" "${pw}" "${extra}" "${verification}" | gzip -1f | base64 -w0)
 	swapped_b64=$(b64swap "$unswapped_b64")
-	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
-	if [ $? != 0 ]; then
-		echo -n "Connect error. "
-		echo "$SERVERRESPONSE"
-		exit 1
-	else
-		unswapped_serverresponse=$(echo "$SERVERRESPONSE" | base64 -d)
-		swapped_serverresponse=$(b64swap "$unswapped_serverresponse")
-		SERVERRESPONSE=$(echo "$swapped_serverresponse" | base64 -d | gunzip -f)
-		case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
-			1)
-				echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
-				;;
-			2)
-				echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
-				echo "Remember your encryption password."
-				;;
-			*)
-				echo "Unknown error:"
-				echo "$SERVERRESPONSE"
-				;;
-		esac
-	fi
+	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
+	response_valid $? $SERVERRESPONSE
+	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
+
+	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
+		1)
+			echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
+			;;
+		2)
+			echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
+			echo "Remember your encryption password."
+			;;
+		*)
+			echo "Unknown error:"
+			echo "$SERVERRESPONSE"
+			;;
+	esac
 }
 
 
@@ -324,55 +324,49 @@ function get ()
 
 	echo ; echo "Fetching record..."
 	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" | gzip -1f | base64 -w0)
-  swapped_b64=$(b64swap "$unswapped_b64")
-	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
-	if [ $? != 0 ]; then
-		echo -n "Connect error. "
-		echo "$SERVERRESPONSE"
-		exit 1
-	else
-		unswapped_serverresponse=$(echo "$SERVERRESPONSE" | base64 -d)
-		swapped_serverresponse=$(b64swap "$unswapped_serverresponse")
-		SERVERRESPONSE=$(echo "$swapped_serverresponse" | base64 -d | gunzip -f)
-		case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
-			1)
-				echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
-				;;
-			2)
-				echo ; read -s -p "Enter encryption password: " encryptionpw
-				if [ "$encryptionpw" == '' ]; then
-					echo ; echo "Error: Encryption password can't be empty."; exit 1
-				fi
-				title=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2)
-				username=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 3 | openssl enc -chacha20 -md sha3-512 -a -d -pbkdf2 -iter 277172 -salt -pass pass:"$encryptionpw")
-				pw=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 4 | openssl enc -chacha20 -md sha3-512 -a -d -pbkdf2 -iter 277172 -salt -pass pass:"$encryptionpw")
-				extra=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 5 | openssl enc -chacha20 -md sha3-512 -a -d -pbkdf2 -iter 277172 -salt -pass pass:"$encryptionpw")
-				verification=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 6 | openssl enc -chacha20 -md sha3-512 -a -d -pbkdf2 -iter 277172 -salt -pass pass:"$encryptionpw")
-				if [ "$verification" != "verification" ]; then
-					echo ; echo "Error: Wrong encryption/decryption password given. Unable to decrypt."
-					exit 1
-				fi
-				echo
-				echo "title: $title"
-				echo "username: $username"
-				echo -n "password (hidden): "
-				tput setaf 0 ; tput setb 0 ; tput setab 0  # hide password
-				echo -n "$pw"
-				tput sgr0  # reset terminal back to normal colors
-				echo  # new line after terminal color reset
-				echo "extra info: $extra"
-				;;
-			3)
-				echo ; echo "Partly matched records found:" ; echo
-				echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
-				echo ; echo "Specify exact title."
-				;;
-			*)
-				echo "Unknown error:"
-				echo "$SERVERRESPONSE"
-				;;
-		esac
-	fi
+	swapped_b64=$(b64swap "$unswapped_b64")
+	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
+	response_valid $? $SERVERRESPONSE
+	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
+
+	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
+		1)
+			echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
+			;;
+		2)
+			echo ; read -s -p "Enter encryption password: " encryptionpw
+			if [ "$encryptionpw" == '' ]; then
+				echo ; echo "Error: Encryption password can't be empty."; exit 1
+			fi
+			title=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2)
+			username=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 3 | openssl enc -chacha20 -md sha3-512 -a -d -pbkdf2 -iter 277172 -salt -pass pass:"$encryptionpw")
+			pw=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 4 | openssl enc -chacha20 -md sha3-512 -a -d -pbkdf2 -iter 277172 -salt -pass pass:"$encryptionpw")
+			extra=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 5 | openssl enc -chacha20 -md sha3-512 -a -d -pbkdf2 -iter 277172 -salt -pass pass:"$encryptionpw")
+			verification=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 6 | openssl enc -chacha20 -md sha3-512 -a -d -pbkdf2 -iter 277172 -salt -pass pass:"$encryptionpw")
+			if [ "$verification" != "verification" ]; then
+				echo ; echo "Error: Wrong encryption/decryption password given. Unable to decrypt."
+				exit 1
+			fi
+			echo
+			echo "title: $title"
+			echo "username: $username"
+			echo -n "password (hidden): "
+			tput setaf 0 ; tput setb 0 ; tput setab 0  # hide password
+			echo -n "$pw"
+			tput sgr0  # reset terminal back to normal colors
+			echo  # new line after terminal color reset
+			echo "extra info: $extra"
+			;;
+		3)
+			echo ; echo "Partly matched records found:" ; echo
+			echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
+			echo ; echo "Specify exact title."
+			;;
+		*)
+			echo "Unknown error:"
+			echo "$SERVERRESPONSE"
+			;;
+	esac
 }
 
 
@@ -381,7 +375,7 @@ function list ()
 	sessioncheck
 	echo "List records."
 	if [ "$title" == 'all' ] || [ "$title" == 'ALL' ]; then
-	  echo ; echo "List all titles."
+		echo ; echo "List all titles."
 	elif [[ $nbrOfParams -gt 1 ]]; then
 		echo ; echo "Input title to list is \"$title\""
 	else
@@ -400,35 +394,29 @@ function list ()
 	echo ; echo "Fetching records..."
 	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" | gzip -1f | base64 -w0)
 	swapped_b64=$(b64swap "$unswapped_b64")
-	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
-	if [ $? != 0 ]; then
-		echo -n "Connect error. "
-		echo "$SERVERRESPONSE"
-		exit 1
-	else
-		unswapped_serverresponse=$(echo "$SERVERRESPONSE" | base64 -d)
-		swapped_serverresponse=$(b64swap "$unswapped_serverresponse")
-		SERVERRESPONSE=$(echo "$swapped_serverresponse" | base64 -d | gunzip -f)
-		case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
-			1)
-				echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
-				;;
-			2)
-				echo ; echo "Records found:"
-				echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
-				echo
-				;;
-			3)
-				echo ; echo "Records found:"
-				echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
-				echo
-				;;
-			*)
-				echo "Unknown error:"
-				echo "$SERVERRESPONSE"
-				;;
-		esac
-	fi
+	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
+	response_valid $? $SERVERRESPONSE
+	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
+
+	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
+		1)
+			echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
+			;;
+		2)
+			echo ; echo "Records found:"
+			echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
+			echo
+			;;
+		3)
+			echo ; echo "Records found:"
+			echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
+			echo
+			;;
+		*)
+			echo "Unknown error:"
+			echo "$SERVERRESPONSE"
+			;;
+	esac
 }
 
 
@@ -454,34 +442,28 @@ function delete ()
 	echo ; echo "Deleting record..."
 	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" | gzip -1f | base64 -w0)
 	swapped_b64=$(b64swap "$unswapped_b64")
-	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
-	if [ $? != 0 ]; then
-		echo -n "Connect error. "
-		echo "$SERVERRESPONSE"
-		exit 1
-	else
-		unswapped_serverresponse=$(echo "$SERVERRESPONSE" | base64 -d)
-		swapped_serverresponse=$(b64swap "$unswapped_serverresponse")
-		SERVERRESPONSE=$(echo "$swapped_serverresponse" | base64 -d | gunzip -f)
-		case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
-			1)
-				echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
-				;;
-			2)
-				echo ; echo "Server record deletion OK:"
-				echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
-				;;
-			3)
-				echo ; echo "Records found:" ; echo
-				echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
-				echo ; echo "Specify exact record name." ; echo
-				;;
-			*)
-				echo "Unknown error:"
-				echo "$SERVERRESPONSE"
-				;;
-		esac
-	fi
+	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
+	response_valid $? $SERVERRESPONSE
+	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
+
+	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
+		1)
+			echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
+			;;
+		2)
+			echo ; echo "Server record deletion OK:"
+			echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
+			;;
+		3)
+			echo ; echo "Records found:" ; echo
+			echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
+			echo ; echo "Specify exact record name." ; echo
+			;;
+		*)
+			echo "Unknown error:"
+			echo "$SERVERRESPONSE"
+			;;
+	esac
 }
 
 
@@ -533,30 +515,24 @@ function update ()
 
 	echo ; echo "Updating record..." ; echo
 	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" "${username}" "${pw}" "${extra}" "${verification}" | gzip -1f | base64 -w0)
-  swapped_b64=$(b64swap "$unswapped_b64")
-	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
-	if [ $? != 0 ]; then
-		echo -n "Connect error. "
-		echo "$SERVERRESPONSE"
-		exit 1
-	else
-		unswapped_serverresponse=$(echo "$SERVERRESPONSE" | base64 -d)
-		swapped_serverresponse=$(b64swap "$unswapped_serverresponse")
-		SERVERRESPONSE=$(echo "$swapped_serverresponse" | base64 -d | gunzip -f)
-		case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
-			1)
-				echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
-				;;
-			2)
-				echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
-				echo "Remember your new encryption password."
-				;;
-			*)
-				echo "Unknown error:"
-				echo "$SERVERRESPONSE"
-				;;
-		esac
-	fi
+	swapped_b64=$(b64swap "$unswapped_b64")
+	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
+	response_valid $? $SERVERRESPONSE
+	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
+
+	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
+		1)
+			echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
+			;;
+		2)
+			echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
+			echo "Remember your new encryption password."
+			;;
+		*)
+			echo "Unknown error:"
+			echo "$SERVERRESPONSE"
+			;;
+	esac
 }
 
 
@@ -583,7 +559,7 @@ used. This is the base of the client<->server interaction.
 	verification.
 
 - status / check / connection / test
-  Check session status against the server.
+	Check session status against the server.
 
 - add / encrypt / enc / put / save [(title)]
 	Add a new record.
