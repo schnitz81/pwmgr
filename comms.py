@@ -44,6 +44,7 @@ def tcp_listen_and_reply():
 
         # generate response
         returnmsg = process.interpret_and_process(data)
+        print(returnmsg)
 
         # add to failed login list if credentials are wrong
         for i in range(len(FAILSTRINGS)):
