@@ -5,11 +5,22 @@ import config
 import zlib
 
 
+def b64swap(b64):
+    if len(b64) > 3:
+        b64str = b64.decode('utf-8')
+        swappedb64 = b64str[0] + b64str[2] + b64str[1] + b64str[3:]
+        swappedb64 = swappedb64.encode('utf-8')
+        return swappedb64
+    else:
+        print("Error: b64 string received for swapping is too short.")
+
+
 def interpret_and_process(base64stringdata):
     # decode base64
     try:
-        debaseddata1 = base64.b64decode(base64stringdata)
-        debaseddata2 = base64.b64decode(debaseddata1).rstrip()
+        unswappedb64 = base64.b64decode(base64stringdata)
+        swappedb64 = b64swap(unswappedb64)
+        debaseddata = base64.b64decode(swappedb64)
     except Exception as b64decodeerror:
         print(f"Error: Unable to decode base64 data: {b64decodeerror}")
         returnmsg = "1 Invalid base64 data to decode."
@@ -17,7 +28,7 @@ def interpret_and_process(base64stringdata):
 
     # decompress and convert to string
     try:
-        decompresseddata = zlib.decompress(debaseddata2, wbits=zlib.MAX_WBITS | 16)
+        decompresseddata = zlib.decompress(debaseddata, wbits=zlib.MAX_WBITS | 16)
         decompresseddata = decompresseddata.decode('utf-8')
     except Exception as decompresserror:
         print(f"Error: Unable to decompress debase64:d data: {decompresserror}")

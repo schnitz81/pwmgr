@@ -3,6 +3,22 @@
 PORT=48222
 SESSIONPATH="$HOME/.config/pwmgr/.session"
 
+
+function b64swap() {
+  # charswap b64
+	local str=$1
+	if [ "$(echo $str | wc -m)" -lt 4 ]; then
+    echo "Error: b64 string too short to swap."; exit 1
+  fi
+	local c1="${str:0:1}"
+	local c2="${str:1:1}"
+	local c3="${str:2:1}"
+	local endstr="${str:3}"
+	local generated_str="${c1}${c3}${c2}${endstr}"
+	echo -n "$generated_str"
+}
+
+
 function init ()
 {
 	echo ; read -p "Create new session? " configask
@@ -40,13 +56,17 @@ function init ()
 	command="init"
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
-	SERVERRESPONSE=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" | gzip -1f | base64 -w0 | base64 -w0 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
+	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" | gzip -1f | base64 -w0)
+	swapped_b64=$(b64swap "$unswapped_b64")
+	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	if [ $? != 0 ]; then
 		echo -n "Connect error. "
 		echo "$SERVERRESPONSE"
 		exit 1
 	else
-		SERVERRESPONSE=$(echo -n "$SERVERRESPONSE" | base64 -d | base64 -d | gunzip -f)
+		unswapped_serverresponse=$(echo "$SERVERRESPONSE" | base64 -d)
+		swapped_serverresponse=$(b64swap "$unswapped_serverresponse")
+		SERVERRESPONSE=$(echo "$swapped_serverresponse" | base64 -d | gunzip -f)
 		case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 			1)
 				echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
@@ -62,6 +82,7 @@ function init ()
 		esac
 	fi
 }
+
 
 function init-change ()
 {
@@ -117,13 +138,17 @@ function init-change ()
 	# align session with server and create a new user table if non-existent
 	echo "Syncing server."
 	command="init-change"
-	SERVERRESPONSE=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${sessionnewuser}" "${sessionnewpw}" | gzip -1f | base64 -w0 | base64 -w0 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH.tmp")" $PORT)
+	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${sessionnewuser}" "${sessionnewpw}" | gzip -1f | base64 -w0)
+	swapped_b64=$(b64swap "$unswapped_b64")
+	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH.tmp")" $PORT)
 	if [ $? != 0 ]; then
 		echo -n "Connect error. "
 		echo "$SERVERRESPONSE"
 		exit 1
 	else
-		SERVERRESPONSE=$(echo -n "$SERVERRESPONSE" | base64 -d | base64 -d | gunzip -f)
+    unswapped_serverresponse=$(echo "$SERVERRESPONSE" | base64 -d)
+		swapped_serverresponse=$(b64swap "$unswapped_serverresponse")
+		SERVERRESPONSE=$(echo "$swapped_serverresponse" | base64 -d | gunzip -f)
 		case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 			1)
 				echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
@@ -165,13 +190,17 @@ function status ()
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
 
 	echo ; echo "Checking status..."
-	SERVERRESPONSE=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" | gzip -1f | base64 -w0 | base64 -w0 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
+	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" | gzip -1f | base64 -w0)
+	swapped_b64=$(b64swap "$unswapped_b64")
+	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	if [ $? != 0 ]; then
 		echo -n "Connect error. "
 		echo "$SERVERRESPONSE"
 		exit 1
 	else
-		SERVERRESPONSE=$(echo "$SERVERRESPONSE" | base64 -d | base64 -d | gunzip -f)
+    unswapped_serverresponse=$(echo "$SERVERRESPONSE" | base64 -d)
+    swapped_serverresponse=$(b64swap "$unswapped_serverresponse")
+    SERVERRESPONSE=$(echo "$swapped_serverresponse" | base64 -d | gunzip -f)
 		case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 			1)
 				echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
@@ -194,7 +223,7 @@ function add ()
 	sessioncheck
 	echo "Add new record."
 	if [[ $nbrOfParams -gt 1 ]] ; then
-		echo ; echo "Title is \""$title"\""
+		echo ; echo "Title is \"$title\""
 	else
 		echo ; read -p "Name/site/title: " title
 	fi
@@ -245,13 +274,17 @@ function add ()
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
 
 	echo ; echo "Adding record..." ; echo
-	SERVERRESPONSE=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" "${username}" "${pw}" "${extra}" "${verification}" | gzip -1f | base64 -w0 | base64 -w0 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
+	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" "${username}" "${pw}" "${extra}" "${verification}" | gzip -1f | base64 -w0)
+	swapped_b64=$(b64swap "$unswapped_b64")
+	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	if [ $? != 0 ]; then
 		echo -n "Connect error. "
 		echo "$SERVERRESPONSE"
 		exit 1
 	else
-		SERVERRESPONSE=$(echo "$SERVERRESPONSE" | base64 -d | base64 -d | gunzip -f)
+		unswapped_serverresponse=$(echo "$SERVERRESPONSE" | base64 -d)
+		swapped_serverresponse=$(b64swap "$unswapped_serverresponse")
+		SERVERRESPONSE=$(echo "$swapped_serverresponse" | base64 -d | gunzip -f)
 		case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 			1)
 				echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
@@ -274,7 +307,7 @@ function get ()
 	sessioncheck
 	echo "Get record."
 	if [[ $nbrOfParams -gt 1 ]] ; then
-		echo ; echo "Input title is \""$title"\""
+		echo ; echo "Input title is \"$title\""
 	else
 		echo ; read -p "Name/site/title to get: " title
 	fi
@@ -290,13 +323,17 @@ function get ()
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
 
 	echo ; echo "Fetching record..."
-	SERVERRESPONSE=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" | gzip -1f | base64 -w0 | base64 -w0 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
+	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" | gzip -1f | base64 -w0)
+  swapped_b64=$(b64swap "$unswapped_b64")
+	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	if [ $? != 0 ]; then
 		echo -n "Connect error. "
 		echo "$SERVERRESPONSE"
 		exit 1
 	else
-		SERVERRESPONSE=$(echo "$SERVERRESPONSE" | base64 -d | base64 -d | gunzip -f)
+		unswapped_serverresponse=$(echo "$SERVERRESPONSE" | base64 -d)
+		swapped_serverresponse=$(b64swap "$unswapped_serverresponse")
+		SERVERRESPONSE=$(echo "$swapped_serverresponse" | base64 -d | gunzip -f)
 		case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 			1)
 				echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
@@ -342,9 +379,11 @@ function get ()
 function list ()
 {
 	sessioncheck
-	echo "Get record."
-	if [[ $nbrOfParams -gt 1 ]] ; then
-		echo ; echo "Input title is \""$title"\""
+	echo "List records."
+	if [ "$title" == 'all' ] || [ "$title" == 'ALL' ]; then
+	  echo ; echo "List all titles."
+	elif [[ $nbrOfParams -gt 1 ]]; then
+		echo ; echo "Input title to list is \"$title\""
 	else
 		echo ; read -p "Name/site/title to list: " title
 	fi
@@ -359,13 +398,17 @@ function list ()
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
 
 	echo ; echo "Fetching records..."
-	SERVERRESPONSE=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" | gzip -1f | base64 -w0 | base64 -w0 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
+	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" | gzip -1f | base64 -w0)
+	swapped_b64=$(b64swap "$unswapped_b64")
+	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	if [ $? != 0 ]; then
 		echo -n "Connect error. "
 		echo "$SERVERRESPONSE"
 		exit 1
 	else
-		SERVERRESPONSE=$(echo "$SERVERRESPONSE" | base64 -d | base64 -d | gunzip -f)
+		unswapped_serverresponse=$(echo "$SERVERRESPONSE" | base64 -d)
+		swapped_serverresponse=$(b64swap "$unswapped_serverresponse")
+		SERVERRESPONSE=$(echo "$swapped_serverresponse" | base64 -d | gunzip -f)
 		case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 			1)
 				echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
@@ -394,7 +437,7 @@ function delete ()
 	sessioncheck
 	echo "Delete record."
 	if [[ $nbrOfParams -gt 1 ]] ; then
-		echo ; echo "Input title is \""$title"\""
+		echo ; echo "Input title is \"$title\""
 	else
 		echo ; read -p "Name/site/title to delete: " title
 	fi
@@ -409,13 +452,17 @@ function delete ()
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
 
 	echo ; echo "Deleting record..."
-	SERVERRESPONSE=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" | gzip -1f | base64 -w0 | base64 -w0 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
+	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" | gzip -1f | base64 -w0)
+	swapped_b64=$(b64swap "$unswapped_b64")
+	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	if [ $? != 0 ]; then
 		echo -n "Connect error. "
 		echo "$SERVERRESPONSE"
 		exit 1
 	else
-		SERVERRESPONSE=$(echo "$SERVERRESPONSE" | base64 -d | base64 -d | gunzip -f)
+		unswapped_serverresponse=$(echo "$SERVERRESPONSE" | base64 -d)
+		swapped_serverresponse=$(b64swap "$unswapped_serverresponse")
+		SERVERRESPONSE=$(echo "$swapped_serverresponse" | base64 -d | gunzip -f)
 		case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 			1)
 				echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
@@ -443,7 +490,7 @@ function update ()
 	sessioncheck
 	echo "Update record."
 	if [[ $nbrOfParams -gt 1 ]] ; then
-		echo ; echo "Input title is \""$title"\""
+		echo ; echo "Input title is \"$title\""
 	else
 		echo ; read -p "Name/site/title to update: " title
 	fi
@@ -485,13 +532,17 @@ function update ()
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
 
 	echo ; echo "Updating record..." ; echo
-	SERVERRESPONSE=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" "${username}" "${pw}" "${extra}" "${verification}" | gzip -1f | base64 -w0 | base64 -w0 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
+	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" "${username}" "${pw}" "${extra}" "${verification}" | gzip -1f | base64 -w0)
+  swapped_b64=$(b64swap "$unswapped_b64")
+	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -w 3 -q 2 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	if [ $? != 0 ]; then
 		echo -n "Connect error. "
 		echo "$SERVERRESPONSE"
 		exit 1
 	else
-		SERVERRESPONSE=$(echo "$SERVERRESPONSE" | base64 -d | base64 -d | gunzip -f)
+		unswapped_serverresponse=$(echo "$SERVERRESPONSE" | base64 -d)
+		swapped_serverresponse=$(b64swap "$unswapped_serverresponse")
+		SERVERRESPONSE=$(echo "$swapped_serverresponse" | base64 -d | gunzip -f)
 		case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 			1)
 				echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
@@ -531,7 +582,7 @@ used. This is the base of the client<->server interaction.
 	Change credentials of an existing session. Old credentials must be given for
 	verification.
 
-- status / check
+- status / check / connection / test
   Check session status against the server.
 
 - add / encrypt / enc / put / save [(title)]
@@ -598,7 +649,7 @@ elif [ "$1" == "init-change" ] || [ "$1" == "config-change" ] || [ "$1" == "conf
 	init-change
 
 # status parameter input - run status procedure
-elif [ "$1" == "status" ] || [ "$1" == "check" ] || [ "$1" == "sessioncheck" ]; then
+elif [ "$1" == "status" ] || [ "$1" == "check" ] || [ "$1" == "connection" ] || [ "$1" == "test" ]; then
 	status
 
 # add parameter input - run add procedure

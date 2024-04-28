@@ -51,13 +51,14 @@ def tcp_listen_and_reply():
                 bruteforcecheck.failed_auth(addr[0])
 
     try:
-        returnmsg = base64.b64encode(base64.b64encode(zlib.compress(returnmsg.encode("utf-8"), 1, wbits=zlib.MAX_WBITS | 16)))
+        # encode response
+        returnmsg = base64.b64encode(process.b64swap(base64.b64encode(zlib.compress(returnmsg.encode("utf-8"), 1, wbits=zlib.MAX_WBITS | 16))))
     except Exception as returnmsg_e:
         print(returnmsg_e)
         returnmsg = f"1 {returnmsg_e}"
-        returnmsg = base64.b64encode(base64.b64encode(zlib.compress(returnmsg.encode("utf-8"), 1, wbits=zlib.MAX_WBITS | 16)))
-
+        returnmsg = base64.b64encode(process.b64swap(base64.b64encode(zlib.compress(returnmsg.encode("utf-8"), 1, wbits=zlib.MAX_WBITS | 16))))
     print(f"Parsed returnmsg: {returnmsg}")
+
     try:
         c.send(returnmsg)
         print("Responded.")
