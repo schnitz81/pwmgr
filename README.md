@@ -33,9 +33,9 @@ Init must be run first to create a session before the other commands can be used
 - init / config<br>
   Create a session. This creates a local session config and attempts to create a remote server db session. If the username db already exists, it's reused. Previous session password must match.<br>
   By entering the same sessionuser/sessionpassword  multiple clients can be used with the same server DB.<br><br>
-- init-change / config-change<br>
+- init-change / config-change / configchange<br>
   Change credentials of an existing session. Old credentials must be given for verification.<br><br>
-- status / check<br>
+- status / check / connection / test<br>
   Check session status against the server.<br><br>
 - add / encrypt / enc / put / save<br>
   Add a new record.<br>
