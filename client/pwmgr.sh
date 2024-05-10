@@ -8,13 +8,13 @@ function response_valid() {
 	local nc_err=$1
 	local response=$2
 	if [[ $nc_err -ne 0 ]]; then
-		echo "Error: Connection error. No server response."; exit 1
+		echo -e "Error: Connection error. No server response.\n"; exit 1
 	elif [ -z "$response" ]; then
-		echo "Error: Server response empty."; exit 1
+		echo -e "Error: Server response empty.\n"; exit 1
 	elif [ "$(echo $response | wc -m)" -lt 5 ]; then
-		echo "Error: Server response data too short: $response"; exit 1
+		echo -e "Error: Server response data too short: $response\n"; exit 1
 	elif [[ "$(echo -n $response | base64 -d 2>&1)" =~ "invalid" ]]; then
-		echo "Error: Server response is not valid base64 encoding: $response"; exit 1
+		echo -e "Error: Server response is not valid base64 encoding: $response\n"; exit 1
 	fi
 }
 
@@ -23,7 +23,7 @@ function b64swap() {
 	# charswap b64
 	local str=$1
 	if [ "$(echo $str | wc -m)" -lt 4 ]; then
-		echo "Error: b64 string too short to swap."; exit 1
+		echo -e "Error: b64 string too short to swap.\n"; exit 1
 	fi
 	local c1="${str:0:1}"
 	local c2="${str:1:1}"
@@ -52,18 +52,18 @@ function init ()
 	echo "Session config."
 	echo ; read -p "Server address/IP: " server
 	if [ "$server" == '' ]; then
-		echo ; echo "Error: server address can't be empty."; exit 1
+		echo -e "\nError: server address can't be empty.\n"; exit 1
 	fi
 	echo ; read -p "Enter session username: " username
 	if [ "$username" == '' ]; then
-		echo ; echo "Error: session username can't be empty."; exit 1
+		echo -e "\nError: session username can't be empty.\n"; exit 1
 	fi
 	echo ; read -s -p "Enter session password: " sessionpw
 	echo ; read -s -p "Repeat session password: " sessionpw2
 	if [ "$sessionpw" != "$sessionpw2" ]; then
-		echo ; echo "Error: passwords don't match."; exit 1
+		echo -e "\nError: passwords don't match.\n"; exit 1
 	elif [ "$sessionpw" == '' ]; then
-		echo ; echo "Error: session password can't be empty."; exit 1
+		echo -e "\nError: session password can't be empty.\n"; exit 1
 	fi
 
 	# create folder for session file
@@ -89,14 +89,17 @@ function init ()
 	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 		1)
 			echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
+			echo
 			;;
 		2)
 			echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
 			echo "Local session and remote server DB aligned successfully."
+			echo
 			;;
 		*)
 			echo "Unknown error:"
 			echo "$SERVERRESPONSE"
+			echo
 			;;
 	esac
 }
@@ -111,29 +114,29 @@ function init-change ()
 	echo "Session config update."
 	echo ; read -p "Server address/IP: " server
 	if [ "$server" == '' ]; then
-		echo ; echo "Error: server address can't be empty."; exit 1
+		echo -e "\nError: server address can't be empty.\n"; exit 1
 	fi
 	echo ; read -p "Enter CURRENT session username: " sessionuser
 	if [ "$sessionuser" == '' ]; then
-		echo ; echo "Error: session username can't be empty."; exit 1
+		echo -e "\nError: session username can't be empty.\n"; exit 1
 	fi
 	echo ; read -s -p "Enter CURRENT session password: " sessionpw
 	echo ; read -s -p "Repeat CURRENT session password: " sessionpw2
 	if [ "$sessionpw" != "$sessionpw2" ]; then
-		echo ; echo "Error: passwords don't match."; exit 1
+		echo -e "\nError: passwords don't match.\n"; exit 1
 	elif [ "$sessionpw" == '' ]; then
-		echo ; echo "Error: session password can't be empty."; exit 1
+		echo -e "\nError: session password can't be empty.\n"; exit 1
 	fi
 	echo ; read -p "Enter NEW session username: " sessionnewuser
 	if [ "$sessionnewuser" == '' ]; then
-		echo ; echo "Error: session username can't be empty."; exit 1
+		echo -e "\nError: session username can't be empty.\n"; exit 1
 	fi
 	echo ; read -s -p "Enter NEW session password: " sessionnewpw
 	echo ; read -s -p "Repeat NEW session password: " sessionnewpw2
 	if [ "$sessionnewpw" != "$sessionnewpw2" ]; then
-		echo ; echo "Error: passwords don't match."; exit 1
+		echo -e "\nError: passwords don't match.\n"; exit 1
 	elif [ "$sessionnewpw" == '' ]; then
-		echo ; echo "Error: session password can't be empty."; exit 1
+		echo -e "\nError: session password can't be empty.\n"; exit 1
 	fi
 
 	# create folder for session file
@@ -165,20 +168,23 @@ function init-change ()
 	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 		1)
 			echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
+			echo
 			;;
 		2)
 			echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
 			echo "Updating local session."
 			mv "$SESSIONPATH.tmp" "$SESSIONPATH"
 			if [ $? != 0 ]; then
-				echo "Error: Local session replacement unsuccessful."
+				echo -e "Error: Local session replacement unsuccessful.\n"
 				exit 1
 			fi
 			echo "Local session and remote server DB aligned successfully."
+			echo
 			;;
 		*)
 			echo "Unknown error:"
 			echo "$SERVERRESPONSE"
+			echo
 			;;
 	esac
 }
@@ -187,7 +193,8 @@ function init-change ()
 function sessioncheck ()
 {
 	if ! [ -f "$SESSIONPATH" ]; then
-		echo "No local session found. Please run with init parameter to create one."; exit 1
+		echo -e "No local session found. Please run with init parameter to create one.\n"
+		exit 1
 	fi
 }
 
@@ -201,7 +208,7 @@ function status ()
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
 
-	echo ; echo "Checking status..."
+	echo -e "\nChecking status..."
 	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" | gzip -1f | base64 -w0)
 	swapped_b64=$(b64swap "$unswapped_b64")
 	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
@@ -211,14 +218,17 @@ function status ()
 	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 		1)
 			echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
+			echo
 			;;
 		2)
-			echo ; echo "Server response OK:"
+			echo -e "\nServer response OK:"
 			echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
+			echo
 			;;
 		*)
 			echo "Unknown error:"
 			echo "$SERVERRESPONSE"
+			echo
 			;;
 	esac
 }
@@ -229,23 +239,23 @@ function add ()
 	sessioncheck
 	echo "Add new record."
 	if [[ $nbrOfParams -gt 1 ]] ; then
-		echo ; echo "Title is \"$title\""
+		echo -e "\nTitle is \"$title\""
 	else
 		echo ; read -p "Name/site/title: " title
 	fi
 	if [ "$title" == '' ]; then
-		echo ; echo "Error: title can't be empty."; exit 1
+		echo -e "\nError: title can't be empty.\n"; exit 1
 	fi
 	echo ; read -p "Enter username: " username
 	if [ "$username" == '' ]; then
-		echo ; echo "Error: session username can't be empty."; exit 1
+		echo -e "\nError: session username can't be empty.\n"; exit 1
 	fi
 	echo ; read -s -p "Enter password: " pw
 	echo ; read -s -p "Repeat password: " pw2
 	if [ "$pw" != "$pw2" ]; then
-		echo ; echo "Error: passwords don't match."; exit 1
+		echo -e "\nError: passwords don't match.\n"; exit 1
 	elif [ "$pw" == '' ]; then
-		echo ; echo "Error: session password can't be empty."; exit 1
+		echo -e "\nError: session password can't be empty.\n"; exit 1
 	fi
 	echo ; read -p "Extra field (may be blank): " extra
 	while true; do
@@ -258,17 +268,18 @@ function add ()
 			echo ; exit 1
 		fi
 		if [ "$encryptionpw" != "$encryptionpw2" ]; then
-			echo ; echo ; echo "Error: Encryption passwords don't match."
+			echo -e "\n\nError: Encryption passwords don't match."
 		elif [ "$encryptionpw" == "$pw" ]; then
-			echo ; echo ; echo "Error: Record password and encryption password shouldn't be the same."
+			echo -e "\n\nError: Record password and encryption password shouldn't be the same."
 		elif [ "$encryptionpw" == '' ]; then
-			echo ; echo ; echo "Error: Encryption password can't be empty."
+			echo -e "\n\nError: Encryption password can't be empty."
 		else
 			break
 		fi
 	done
 
 	# encrypt user and pw
+	echo -e "\nEncrypting..."
 	title=$(echo "$title" | base64 | base64)
 	username=$(echo "$username" | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw" | tr -d "\n")
 	pw=$(echo "$pw" | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw" | tr -d "\n")
@@ -279,7 +290,7 @@ function add ()
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
 
-	echo ; echo "Adding record..." ; echo
+	echo -e "\nAdding record...\n"
 	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" "${username}" "${pw}" "${extra}" "${verification}" | gzip -1f | base64 -w0)
 	swapped_b64=$(b64swap "$unswapped_b64")
 	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
@@ -289,14 +300,17 @@ function add ()
 	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 		1)
 			echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
+			echo
 			;;
 		2)
 			echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
 			echo "Remember your encryption password."
+			echo
 			;;
 		*)
 			echo "Unknown error:"
 			echo "$SERVERRESPONSE"
+			echo
 			;;
 	esac
 }
@@ -307,13 +321,13 @@ function get ()
 	sessioncheck
 	echo "Get record."
 	if [[ $nbrOfParams -gt 1 ]] ; then
-		echo ; echo "Input title is \"$title\""
+		echo -e "\nInput title is \"$title\""
 	else
 		echo ; read -p "Name/site/title to get: " title
 	fi
 
 	if [[ -z "$title" ]]; then
-		echo "Name can't be blank."
+		echo -e "Name can't be blank.\n"
 		exit 1
 	fi
 
@@ -322,7 +336,7 @@ function get ()
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
 
-	echo ; echo "Fetching record..."
+	echo -e "\nFetching record..."
 	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" | gzip -1f | base64 -w0)
 	swapped_b64=$(b64swap "$unswapped_b64")
 	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
@@ -332,19 +346,21 @@ function get ()
 	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 		1)
 			echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
+			echo
 			;;
 		2)
 			echo ; read -s -p "Enter encryption password: " encryptionpw
 			if [ "$encryptionpw" == '' ]; then
-				echo ; echo "Error: Encryption password can't be empty."; exit 1
+				echo -e "\nError: Encryption password can't be empty.\n"; exit 1
 			fi
+			echo -e "\nDecrypting..."
 			title=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2)
 			username=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 3 | openssl enc -chacha20 -md sha3-512 -a -d -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw")
 			pw=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 4 | openssl enc -chacha20 -md sha3-512 -a -d -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw")
 			extra=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 5 | openssl enc -chacha20 -md sha3-512 -a -d -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw")
 			verification=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 6 | openssl enc -chacha20 -md sha3-512 -a -d -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw")
 			if [ "$verification" != "verification" ]; then
-				echo ; echo "Error: Wrong encryption/decryption password given. Unable to decrypt."
+				echo -e "\nError: Wrong encryption/decryption password given. Unable to decrypt.\n"
 				exit 1
 			fi
 			echo
@@ -356,15 +372,18 @@ function get ()
 			tput sgr0  # reset terminal back to normal colors
 			echo  # new line after terminal color reset
 			echo "extra info: $extra"
+			echo
 			;;
 		3)
-			echo ; echo "Partly matched records found:" ; echo
+			echo -e "\nPartly matched records found:\n"
 			echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
-			echo ; echo "Specify exact title."
+			echo -e "\nSpecify exact title."
+			echo
 			;;
 		*)
 			echo "Unknown error:"
 			echo "$SERVERRESPONSE"
+			echo
 			;;
 	esac
 }
@@ -375,14 +394,14 @@ function list ()
 	sessioncheck
 	echo "List records."
 	if [ "$title" == 'all' ] || [ "$title" == 'ALL' ]; then
-		echo ; echo "List all titles."
+		echo -e "\nList all titles."
 	elif [[ $nbrOfParams -gt 1 ]]; then
-		echo ; echo "Input title to list is \"$title\""
+		echo -e "\nInput title to list is \"$title\""
 	else
 		echo ; read -p "Name/site/title to list: " title
 	fi
 	if [[ -z "$title" ]]; then
-		echo "Name can't be blank."
+		echo -e "Name can't be blank.\n"
 		exit 1
 	fi
 
@@ -391,7 +410,7 @@ function list ()
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
 
-	echo ; echo "Fetching records..."
+	echo -e "\nFetching records..."
 	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" | gzip -1f | base64 -w0)
 	swapped_b64=$(b64swap "$unswapped_b64")
 	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
@@ -401,20 +420,22 @@ function list ()
 	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 		1)
 			echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
+			echo
 			;;
 		2)
-			echo ; echo "Records found:"
+			echo -e "\nRecords found:\n"
 			echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
 			echo
 			;;
 		3)
-			echo ; echo "Records found:"
+			echo -e "\nRecords found:\n"
 			echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
 			echo
 			;;
 		*)
 			echo "Unknown error:"
 			echo "$SERVERRESPONSE"
+			echo
 			;;
 	esac
 }
@@ -425,12 +446,12 @@ function delete ()
 	sessioncheck
 	echo "Delete record."
 	if [[ $nbrOfParams -gt 1 ]] ; then
-		echo ; echo "Input title is \"$title\""
+		echo -e "\nInput title is \"$title\""
 	else
 		echo ; read -p "Name/site/title to delete: " title
 	fi
 	if [[ -z "$title" ]]; then
-		echo "Name can't be blank."
+		echo -e "Name can't be blank.\n"
 		exit 1
 	fi
 
@@ -439,7 +460,7 @@ function delete ()
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
 
-	echo ; echo "Deleting record..."
+	echo -e "\nDeleting record..."
 	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" | gzip -1f | base64 -w0)
 	swapped_b64=$(b64swap "$unswapped_b64")
 	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
@@ -449,19 +470,23 @@ function delete ()
 	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 		1)
 			echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
+			echo
 			;;
 		2)
-			echo ; echo "Server record deletion OK:"
+			echo -e "\nServer record deletion OK:"
 			echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
+			echo
 			;;
 		3)
-			echo ; echo "Records found:" ; echo
+			echo -e "\nRecords found:\n"
 			echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
-			echo ; echo "Specify exact record name." ; echo
+			echo -e "\nSpecify exact record name."
+			echo
 			;;
 		*)
 			echo "Unknown error:"
 			echo "$SERVERRESPONSE"
+			echo
 			;;
 	esac
 }
@@ -472,24 +497,24 @@ function update ()
 	sessioncheck
 	echo "Update record."
 	if [[ $nbrOfParams -gt 1 ]] ; then
-		echo ; echo "Input title is \"$title\""
+		echo -e "\nInput title is \"$title\""
 	else
 		echo ; read -p "Name/site/title to update: " title
 	fi
 	if [[ -z "$title" ]]; then
-		echo "Name can't be blank."
+		echo -e "Name can't be blank.\n"
 		exit 1
 	fi
 	echo ; read -p "Enter NEW username: " username
 	if [ "$username" == '' ]; then
-		echo ; echo "Error: session username can't be empty."; exit 1
+		echo -e "\nError: session username can't be empty.\n"; exit 1
 	fi
 	echo ; read -s -p "Enter NEW password: " pw
 	echo ; read -s -p "Repeat NEW password: " pw2
 	if [ "$pw" != "$pw2" ]; then
-		echo ; echo "Error: passwords don't match."; exit 1
+		echo -e "\nError: passwords don't match.\n"; exit 1
 	elif [ "$pw" == '' ]; then
-		echo ; echo "Error: session password can't be empty."; exit 1
+		echo -e "\nError: session password can't be empty.\n"; exit 1
 	fi
 	echo ; read -p "Extra field (may be blank): " extra
 	while true; do
@@ -502,17 +527,18 @@ function update ()
 			echo ; exit 1
 		fi
 		if [ "$encryptionpw" != "$encryptionpw2" ]; then
-			echo ; echo ; echo "Error: Encryption passwords don't match."
+			echo -e "\n\nError: Encryption passwords don't match."
 		elif [ "$encryptionpw" == "$pw" ]; then
-			echo ; echo ; echo "Error: Record password and encryption password shouldn't be the same."
+			echo -e "\n\nError: Record password and encryption password shouldn't be the same."
 		elif [ "$encryptionpw" == '' ]; then
-			echo ; echo ; echo "Error: Encryption password can't be empty."
+			echo -e "\n\nError: Encryption password can't be empty."
 		else
 			break
 		fi
 	done
 
 	# encrypt user and pw
+	echo -e "\nEncrypting..."
 	title=$(echo "$title" | base64 | base64)
 	username=$(echo "$username" | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw" | tr -d "\n")
 	pw=$(echo "$pw" | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw" | tr -d "\n")
@@ -523,7 +549,7 @@ function update ()
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
 
-	echo ; echo "Updating record..." ; echo
+	echo -e "\nUpdating record...\n"
 	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" "${username}" "${pw}" "${extra}" "${verification}" | gzip -1f | base64 -w0)
 	swapped_b64=$(b64swap "$unswapped_b64")
 	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
@@ -533,14 +559,17 @@ function update ()
 	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 		1)
 			echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
+			echo
 			;;
 		2)
 			echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
 			echo "Remember your new encryption password."
+			echo
 			;;
 		*)
 			echo "Unknown error:"
 			echo "$SERVERRESPONSE"
+			echo
 			;;
 	esac
 }
