@@ -3,7 +3,8 @@ A centralized password manager with distributed encryption.
 
 ## Description
 The server part listens to connections from a client and verifies the access with session credentials that are predefined through the init command. Multiple clients can be used as long as they are aligned  against the server with the same credentials given with init. 
-<br><br>The security functionality is based on a strong encryption of every record that is made client-side before sent to the server. Even if the the server DB is compromised or the communication is eavesdropped, the records themselves will still be safe.
+<br><br>The security functionality is based on a strong encryption of every record that is performed client-side before the data sent to the server. Even if the the server DB is compromised or the communication is eavesdropped, the records themselves will still be safe through the encryption.
+<br><br>If keyctl is available in the client environment, it will be used for a temporary user keyring to avoid encryption password user input multiple times within a certain timespan.
 
 ### Server
 - Choose folder path for the DB to be stored in the config.py.

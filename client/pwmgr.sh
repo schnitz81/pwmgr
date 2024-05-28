@@ -2,6 +2,7 @@
 
 PORT=48222
 SESSIONPATH="$HOME/.config/pwmgr/.session"
+KEY_SESSION_SECONDS=$((60*90))
 
 
 function response_valid() {
@@ -13,7 +14,7 @@ function response_valid() {
 		echo -e "Error: Server response empty.\n"; exit 1
 	elif [ "$(echo $response | wc -m)" -lt 5 ]; then
 		echo -e "Error: Server response data too short: $response\n"; exit 1
-	elif [[ "$(echo -n $response | base64 -d 2>&1)" =~ "invalid" ]]; then
+	elif [[ "$(echo -n "$response" | base64 -d 2>&1)" =~ "invalid" ]]; then
 		echo -e "Error: Server response is not valid base64 encoding: $response\n"; exit 1
 	fi
 }
@@ -34,7 +35,7 @@ function b64swap() {
 }
 
 
-decode_response() {
+function decode_response() {
 	local response=$1
 	local unswapped_serverresponse=$(echo "$response" | base64 -d)
 	local swapped_serverresponse=$(b64swap "$unswapped_serverresponse")
@@ -43,8 +44,41 @@ decode_response() {
 }
 
 
-function init ()
-{
+function add_key_to_key_session() {
+	if [ -n "$(which keyctl 2>/dev/null)" ] ; then
+		if $(keyctl list @u | grep -v 'expired' | grep -q 'pwmgr'); then  # revoke old key session if existing
+			keyctl revoke $(keyctl search @u user pwmgr)
+		fi
+		local encpw=$1
+		local b64sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1 | base64 -d)
+		if [ "$(echo $b64sessionpw | wc -m)" -gt 3 ]; then
+			local encpw_encrypted=$(echo "$encpw" | cut -d ' ' -f 3 | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 577372 -salt -pass pass:"$b64sessionpw")
+			local b64_encpw_unswapped=$(echo -n "$encpw_encrypted" | base64 -w0)
+			local b64_encpw_swapped=$(b64swap "$b64_encpw_unswapped")
+			if [ $? -eq 0 ]; then  # write to session and set timeout if it was successfully created
+				local id=$(keyctl add user pwmgr "$b64_encpw_swapped" @u)
+				keyctl timeout "$id" "$KEY_SESSION_SECONDS"
+			fi
+		fi
+	fi
+}
+
+
+function get_key_from_key_session() {
+	if [ -n "$(which keyctl 2>/dev/null)" ] ; then
+		if $(keyctl list @u | grep -v 'expired' | grep -q 'pwmgr'); then  # only fetch key if the key session exists
+			local b64sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1 | base64 -d)
+			local b64_encpw_unswapped=$(keyctl pipe $(keyctl search @u user pwmgr))
+			local b64_encpw_swapped=$(b64swap "$b64_encpw_unswapped")
+			local encpw_encrypted=$(echo "$b64_encpw_swapped" | base64 -d)
+			local encpw=$(echo "$encpw_encrypted" | cut -d ' ' -f 3 | openssl enc -chacha20 -md sha3-512 -a -d -pbkdf2 -iter 577372 -salt -pass pass:"$b64sessionpw")
+			echo -n "$encpw"
+		fi
+	fi
+}
+
+
+function init () {
 	echo ; read -p "Create new session? " configask
 	if [ "$configask" != 'y' ] && [ "$configask" != 'Y' ] && [ "$configask" != 'yes' ] && [ "$configask" != 'YES' ]; then
 		return
@@ -67,9 +101,10 @@ function init ()
 	fi
 
 	# create folder for session file
-	mkdir -p "$(echo "$SESSIONPATH" | awk 'BEGIN{FS=OFS="/"}{NF--}1')"
+	mkdir -p -m 0700 "$(echo "$SESSIONPATH" | awk 'BEGIN{FS=OFS="/"}{NF--}1')"
 
-	# create local session
+	# create obligatory local session with user only permissions
+	touch "$SESSIONPATH" && chmod 0600 "$SESSIONPATH" || (res=$?; echo -e "\nError: Failed to create session."; (exit $res))
 	echo "$server" > "$SESSIONPATH"
 	echo "$username" | base64 | base64 >> "$SESSIONPATH"
 	echo "$sessionpw" | base64 | base64 >> "$SESSIONPATH"
@@ -105,8 +140,7 @@ function init ()
 }
 
 
-function init-change ()
-{
+function init-change () {
 	echo ; read -p "Create or overwrite local session and change session credentials server-side? " configask
 	if [ "$configask" != 'y' ] && [ "$configask" != 'Y' ] && [ "$configask" != 'yes' ] && [ "$configask" != 'YES' ]; then
 		return
@@ -190,17 +224,18 @@ function init-change ()
 }
 
 
-function sessioncheck ()
-{
+function sessioncheck () {
 	if ! [ -f "$SESSIONPATH" ]; then
 		echo -e "No local session found. Please run with init parameter to create one.\n"
+		exit 1
+	elif [[ $(cat $SESSIONPATH | wc -l) -lt 3 ]]; then
+		echo -e "Local session exists but is invalid.\n"
 		exit 1
 	fi
 }
 
 
-function status ()
-{
+function status () {
 	sessioncheck
 	echo "Session status check."
 
@@ -234,8 +269,7 @@ function status ()
 }
 
 
-function add ()
-{
+function add () {
 	sessioncheck
 	echo "Add new record."
 	if [[ $nbrOfParams -gt 1 ]] ; then
@@ -316,8 +350,7 @@ function add ()
 }
 
 
-function get ()
-{
+function get () {
 	sessioncheck
 	echo "Get record."
 	if [[ $nbrOfParams -gt 1 ]] ; then
@@ -349,9 +382,17 @@ function get ()
 			echo
 			;;
 		2)
-			echo ; read -s -p "Enter encryption password: " encryptionpw
-			if [ "$encryptionpw" == '' ]; then
-				echo -e "\nError: Encryption password can't be empty.\n"; exit 1
+			# try key session if available
+			encryptionpw=$(get_key_from_key_session)
+			if [ -n "$encryptionpw" ]; then
+				echo -e "\nTesting key session password..."
+				verification=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 6 | openssl enc -chacha20 -md sha3-512 -a -d -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw")
+			fi
+			if [ "$verification" != "verification" ]; then  # no valid encpw from key session, enter manually
+				echo ; read -s -p "Enter encryption password: " encryptionpw
+				if [ "$encryptionpw" == '' ]; then
+					echo -e "\nError: Encryption password can't be empty.\n"; exit 1
+				fi
 			fi
 			echo -e "\nDecrypting..."
 			title=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2)
@@ -373,6 +414,9 @@ function get ()
 			echo  # new line after terminal color reset
 			echo "extra info: $extra"
 			echo
+
+			# add encryption pw to key session
+			add_key_to_key_session "$encryptionpw"
 			;;
 		3)
 			echo -e "\nPartly matched records found:\n"
@@ -389,8 +433,7 @@ function get ()
 }
 
 
-function list ()
-{
+function list () {
 	sessioncheck
 	echo "List records."
 	if [ "$title" == 'all' ] || [ "$title" == 'ALL' ]; then
@@ -441,8 +484,7 @@ function list ()
 }
 
 
-function delete ()
-{
+function delete () {
 	sessioncheck
 	echo "Delete record."
 	if [[ $nbrOfParams -gt 1 ]] ; then
@@ -492,8 +534,7 @@ function delete ()
 }
 
 
-function update ()
-{
+function update () {
 	sessioncheck
 	echo "Update record."
 	if [[ $nbrOfParams -gt 1 ]] ; then
@@ -575,8 +616,7 @@ function update ()
 }
 
 
-function helptext ()  # Help text diplayed if no or non-existent input parameter is given.
-{
+function helptext () {  # Help text diplayed if no or non-existent input parameter is given.
 	cat <<'END'
 Run command:
 $ pwmgr (parameter) [(title)]
@@ -638,19 +678,19 @@ if [[ $nbrOfParams -gt 1 ]]; then
 fi
 
 # check if base64 is installed
-if [ -z "$(which base64)" ] ; then
+if [ -z "$(which base64 2>/dev/null)" ]; then
 	echo "base64 not found."
 	exit 1
 fi
 
 # check if openssl is installed
-if [ -z "$(which openssl)" ] ; then
+if [ -z "$(which openssl 2>/dev/null)" ]; then
 	echo "openssl not found."
 	exit 1
 fi
 
 # check if gzip is installed
-if [ -z "$(which gzip)" ] ; then
+if [ -z "$(which gzip 2>/dev/null)" ]; then
 	echo "gzip not found."
 	exit 1
 fi
