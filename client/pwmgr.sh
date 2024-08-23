@@ -67,12 +67,16 @@ function add_key_to_key_session() {
 function get_key_from_key_session() {
 	if [ -n "$(which keyctl 2>/dev/null)" ] ; then
 		if $(keyctl list @u | grep -v 'expired' | grep -q 'pwmgr'); then  # only fetch key if the key session exists
-			local b64sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1 | base64 -d)
-			local b64_encpw_unswapped=$(keyctl pipe $(keyctl search @u user pwmgr))
-			local b64_encpw_swapped=$(b64swap "$b64_encpw_unswapped")
-			local encpw_encrypted=$(echo "$b64_encpw_swapped" | base64 -d)
-			local encpw=$(echo "$encpw_encrypted" | cut -d ' ' -f 3 | openssl enc -chacha20 -md sha3-512 -a -d -pbkdf2 -iter 577372 -salt -pass pass:"$b64sessionpw")
-			echo -n "$encpw"
+			# check for error when using key
+			keyctl pipe $(keyctl search @u user pwmgr) 1>/dev/null  # test key fetching to detect any error
+			if [ $? -ne 1 ]; then
+				local b64sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1 | base64 -d)
+				local b64_encpw_unswapped=$(keyctl pipe $(keyctl search @u user pwmgr))
+				local b64_encpw_swapped=$(b64swap "$b64_encpw_unswapped")
+				local encpw_encrypted=$(echo "$b64_encpw_swapped" | base64 -d)
+				local encpw=$(echo "$encpw_encrypted" | cut -d ' ' -f 3 | openssl enc -chacha20 -md sha3-512 -a -d -pbkdf2 -iter 577372 -salt -pass pass:"$b64sessionpw")
+				echo -n "$encpw"
+			fi
 		fi
 	fi
 }
@@ -407,14 +411,19 @@ function get () {
 			echo
 			echo "title: $title"
 			echo "username: $username"
-			echo -n "password (hidden): "
-			tput setaf 0 ; tput setb 0 ; tput setab 0  # hide password
-			echo -n "$pw"
-			tput sgr0  # reset terminal back to normal colors
+
+			if (( $nomask )); then  # output password depending on nomask input parameter
+				echo "password: $pw"
+			else
+				echo -n "password (hidden): "
+				tput setaf 0 ; tput setb 0 ; tput setab 0  # hide password
+				echo -n "$pw"
+				tput sgr0  # reset terminal back to normal colors
+			fi
+
 			echo  # new line after terminal color reset
 			echo "extra info: $extra"
 			echo
-
 			# add encryption pw to key session
 			add_key_to_key_session "$encryptionpw"
 			;;
@@ -713,6 +722,10 @@ elif [ "$1" == "add" ] || [ "$1" == "encrypt" ] || [ "$1" == "enc" ] || [ "$1" =
 
 # get parameter input - run get procedure
 elif [ "$1" == "get" ] || [ "$1" == "decrypt" ] || [ "$1" == "dec" ] || [ "$1" == "fetch" ] || [ "$1" == "show" ] || [ "$1" == "load" ]; then
+	# password mask override
+	if [[ $nbrOfParams -gt 2 ]] && [ "$3" == "--nomask" ]; then
+		nomask=1
+	fi
 	get
 
 # list parameter input - run get procedure
