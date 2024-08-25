@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block title %}
+pwmgr-webapp
+{% endblock %}
+
+{% block content %}
+ <div class="formclass">
+
+    <div class="content">
+
+     <h2>pwmgr</h2>
+
+     <div class="form">
+
+    <form method ="post" id="config">
+    <input type="hidden" name="requestid" id="requestid" value="{{ requestid }}">
+    <table>
+        <tr>
+            <td>Server:</td><td><input style="float:right;" type="text" name="server" id="server" form="config" value="{{ server }}"></td>
+        </tr>
+        <tr>
+            <td>Session user:</td><td><input style="float:right;" type="text" name="sessionuser" id="sessionuser" form="config" value="{{ sessionuser }}"></td>
+        </tr>
+        <tr>
+            <td>Session password:</td><td><input style="float:right;" type="password" name="sessionpw" id="sessionpw" form="config" value="{{ sessionpw }}"></td>
+        </tr>
+        <tr>
+            <td>Encryption pw:</td><td><input style="float:right;" type="password" name="encryptionpw" id="encryptionpw" form="config" value="{{ encryptionpw }}"></td>
+        </tr>
+        <tr>
+            <td>Title:</td><td><input style="float:right;" type="text" name="title" id="title" form="config" value="{{ title }}"></td>
+        </tr>
+    </table>
+    <p style="margin:15;"><input type="submit" name="btn" form="config" value="Get"/>
+    <input type="submit" name="btn" form="config" value="Search"/>
+    <input type="submit" name="btn" form="config" value="Add"/>
+    <input type="submit" name="btn" form="config" value="Delete"/>
+    <input type="submit" name="btn" form="config" value="Clear"/></p>
+
+
+
+    <table>
+        <tr>
+            <td>fetched title:</td><td><input type="text" name="fetched_title" id="fetched_title" form="config" value="{{ fetched_title }}"/></td>
+        </tr>
+        <tr>
+            <td>username:</td><td><input style="float:right;" type="button" value="Copy" onclick="copyText('username');"/><input style="float:right;" type="text" name="username" id="username" form="config" value="{{ username }}"/></td>
+        </tr>
+        <tr>
+            <td>password:</td><td><input style="float:right;" type="button" value="Copy" onclick="copyText('pw');"/><input style="float:right;" type="password" name="pw" id="pw" form="config" value="{{ pw }}"/></td>
+        </tr>
+        <tr>
+            <td>extra info:</td><td><input style="float:right;" type="button" value="Copy" onclick="copyText('extra');"/><input style="float:right;" type="text" name="extra" id="extra" form="config" value="{{ extra }}"/></td>
+        </tr>
+    </table>
+
+
+    </form>
+     {% with messages = get_flashed_messages() %}
+            {% if messages %}
+            <ul class=flashes>
+                {% for message in messages %}
+                    {{ message }}<br>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    </div>
+    </div>
+
+
+
+
+
+    <br />
+
+{% endblock %}

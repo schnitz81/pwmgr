@@ -6,7 +6,7 @@ The server part listens to connections from a client and verifies the access wit
 <br><br>The security functionality is based on a strong encryption of every record that is performed client-side before the data sent to the server. Even if the the server DB is compromised or the communication is eavesdropped, the records themselves will still be safe through the encryption.
 <br><br>If keyctl is available in the client environment, it will be used for a temporary user keyring to avoid encryption password user input multiple times within a certain timespan.
 
-### Server
+## Server
 - Choose folder path for the DB to be stored in the config.py.
 - Run the application: 
 - ```python3 -u main.py```
@@ -17,14 +17,18 @@ https://hub.docker.com/r/schnitz81/pwmgr-server
 Alt. use the Dockerfile to build it. The appropriate port needs to be forwarded and the /db folder mounted for persistence. See comments in Dockerfile for run example.
 
 
-### Client
+## Client
 
-#### Installation
+### Requirements
+
+The client needs netcat-openbsd, openssl and gzip. 
+
+### Installation
 Download the client file and make it executable.<br>
 Example:<br>
 ```wget -O /usr/local/bin/pwmgr https://raw.githubusercontent.com/schnitz81/pwmgr/main/client/pwmgr.sh && chmod +x /usr/local/bin/pwmgr```
 
-#### Usage
+### Usage
 
 Run command:<br> 
 ```pwmgr (parameter)```
@@ -56,3 +60,19 @@ Init must be run first to create a session before the other commands can be used
 - update / change / edit<br>
   Change a record, e.g. change the password stored.<br>
   If the name of the record already exists, it's not possible to use "add" to overwrite, but this command must be used instead. 
+
+## Web-app
+
+The web-app is an alternative way of using the client. It also makes it easier to use pwmgr on mobile devices where terminals are rarely used.
+Since it only interacts with the terminal based client, it only needs the client part and can be run separately from the pwmgr server. 
+
+### Requirements
+
+- The Python3 dependencies are listed in the requirements file.
+- The pwmgr client executable needs to be present in one of the PATH locations (and named "pwmgr"), with the dependencies listed above.
+
+### Usage
+
+- See comments in Dockerfile for build and run example as container. Or:<br>
+- Use pip to install the requirements and install the client manually with the dependencies as above.
+- Run with: ```python -u main.py```<br>
