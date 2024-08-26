@@ -1,0 +1,50 @@
+<html>
+    <head>
+        <title>
+            {% block title%} {% endblock %}
+        </title>
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css')}}">
+
+        <script>
+            // copy buttons functionality
+            function copyText(id) {
+                const hiddenTextElement = document.getElementById(id);
+                hiddenTextElement.type = 'text';
+                hiddenTextElement.select();
+                document.execCommand('copy');
+                hiddenTextElement.type = 'password';
+            }
+        </script>
+
+        <script>
+            window.onload = function() {
+
+                // try to fetch stored request id
+                var requestid = localStorage.getItem("requestid");
+
+                // check if requestid is already set
+                if (document.getElementById('requestid').value < 1000000000000) {
+
+                    // test if requestid can be reused or a new id should be generated
+                    if (requestid < 1000000000000) {
+                        requestid = Math.floor(Math.random() * 8999999999998) + 1000000000000;
+                        document.getElementById('requestid').value = requestid;
+                        localStorage.setItem("requestid", requestid);  // store is in localstore
+                    } else {
+                        // reuse old id since it's available
+                        document.getElementById('requestid').value = requestid;
+                    }
+                }
+            }
+        </script>
+    </head>
+
+    <body>
+        {% block content %}
+        {% endblock %}
+
+    </body>
+</html>
+
+
+

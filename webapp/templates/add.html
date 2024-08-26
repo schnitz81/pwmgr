@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block title %}
+pwmgr-webapp
+{% endblock %}
+
+{% block content %}
+ <div class="formclass">
+
+    <div class="content">
+
+     <h2>pwmgr</h2>
+
+     <div class="form">
+
+    <form method ="post" id="config">
+    <input type="hidden" name="requestid" id="requestid" value="{{ requestid }}">
+    <table>
+        <tr>
+            <td>Adding {{ title }}</td>
+        </tr>
+        <tr>
+            <td>title:</td><td><input style="float:right;" type="text" name="title" id="title" form="config" value="{{ title }}"></td>
+        </tr>
+        <tr>
+            <td>username:</td><td><input style="float:right;" type="text" name="username" id="username" form="config" value="{{ username }}"></td>
+        </tr>
+        <tr>
+            <td>password:</td><td><input style="float:right;" type="password" name="pw" id="pw" form="config" value="{{ pw }}"></td>
+        </tr>
+        <tr>
+            <td>extra info:</td><td><input style="float:right;" type="text" name="extra" id="extra" form="config" value="{{ extra }}"></td>
+        </tr>
+        <tr>
+            <td>Encryption password:</td><td><input style="float:right;" type="password" name="encryptionpw" id="encryptionpw" form="config" value="{{ encryptionpw }}"></td>
+        </tr>
+        <tr>
+            <td>Confirm encryption password:</td><td><input style="float:right;" type="password" name="encryptionpw2" id="encryptionpw2" form="config" value="{{ encryptionpw2 }}"></td>
+        </tr>
+
+    </table>
+    <p style="margin:15;"><input type="submit" name="btn" form="config" value="Add"/>
+    <input type="submit" name="btn" form="config" value="Cancel"/></p>
+    <p style="margin:15;">Add and overwrite if existing: <input style="width: 6.5em;" type="submit" name="btn" form="config" value="Overwrite"/></p>
+
+
+    </form>
+
+    </div>
+
+    </div>
+    </div>
+
+
+
+
+
+    <br />
+
+{% endblock %}

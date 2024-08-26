@@ -686,6 +686,12 @@ if [[ $nbrOfParams -gt 1 ]]; then
 	title=$2
 fi
 
+# check if netcat is installed
+if [ -z "$(which nc 2>/dev/null)" ]; then
+	echo "netcat not found. netcat-openbsd version needed."
+	exit 1
+fi
+
 # check if base64 is installed
 if [ -z "$(which base64 2>/dev/null)" ]; then
 	echo "base64 not found."
