@@ -47,6 +47,7 @@ def is_allowed_to_login(ip):
         else:
             # delete ip from bantable if ban expired
             del bantable[ip]
+            print(f'{ip} unbanned.')
     return True
 
 
@@ -75,3 +76,4 @@ def failed_auth(ip):
     # ban IP if enough fail records within interval remain
     if len(failtable[ip]) >= MAX_TRIES_WITHIN_INTERVAL:
         bantable[ip] = epochnow
+        print(f'{ip} banned.')
