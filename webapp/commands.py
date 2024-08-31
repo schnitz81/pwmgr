@@ -41,6 +41,8 @@ def init(server, sessionuser, sessionpw):
             elif 'Error:' in line:
                 flash(line)
                 return False
+            elif '2 No previous credentials' in line:
+                flash('Session user not found. Created new user with entered session credentials.')
         if child.isalive():
             child.close()
         # Print the final state of the child. Normally isalive() should be FALSE.
