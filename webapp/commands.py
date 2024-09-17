@@ -17,10 +17,13 @@ def test():
         print(test_e)
 
 
-def init(server, sessionuser, sessionpw):
+def init(server, sessionuser, sessionpw, new):
     try:
         flash('Init handshake...')
-        child = pexpect.spawnu('pwmgr init', timeout=5, maxread=1, encoding='utf-8')
+        if not new:
+            child = pexpect.spawnu('pwmgr init --nonew', timeout=5, maxread=1, encoding='utf-8')
+        else:
+            child = pexpect.spawnu('pwmgr init', timeout=5, maxread=1, encoding='utf-8')
         child.expect(r'\?\s*$')
         child.sendline('Y')
         child.expect(r':\s*$')
@@ -35,7 +38,10 @@ def init(server, sessionuser, sessionpw):
         output = child.read().split('\n')
         print(f'init: {output}')
         for line in output:
-            if 'Server error' in line:
+            if 'nonew selected' in line:
+                flash('Entered user not found. Check username or create a new user by adding a new record.')
+                return False
+            elif 'Server error' in line:
                 flash(line)
                 return False
             elif 'Error:' in line:

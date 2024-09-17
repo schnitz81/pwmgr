@@ -119,7 +119,8 @@ function init () {
 	command="init"
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
-	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" | gzip -1f | base64 -w0)
+	nonew=$(echo -n "$nonew" | base64 | base64)
+	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${nonew}" | gzip -1f | base64 -w0)
 	swapped_b64=$(b64swap "$unswapped_b64")
 	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	response_valid $? $SERVERRESPONSE
@@ -639,7 +640,7 @@ used. This is the base of the client<->server interaction.
 	Create a session. This creates a local session config and attempts to create
 	a remote server	db session. If the username db already exists, it's reused.
 	Previous session password must match.
-	By entering the same sessionuser/sessionpassword  multiple clients can be
+	By entering the same sessionuser/sessionpassword multiple clients can be
 	used with the same server DB.
 
 - init-change / config-change
@@ -712,6 +713,10 @@ fi
 
 # init parameter input - run init procedure
 if [ "$1" == "init" ] || [ "$1" == "config" ]; then
+	# new session creation block option
+	if [[ $nbrOfParams -gt 1 ]] && [ "$2" == "--nonew" ]; then
+		nonew=1
+	fi
 	init
 
 # init-change parameter input - run init-change procedure
