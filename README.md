@@ -42,7 +42,7 @@ Init must be run first to create a session before the other commands can be used
   Change credentials of an existing session. Old credentials must be given for verification.<br><br>
 - status / check / connection / test<br>
   Check session status against the server.<br><br>
-- add / encrypt / enc / put / save<br>
+- add / encrypt / enc / put / save [(title)]<br>
   Add a new record.<br>
   Fields stored:<br>
   - Title/Name
@@ -51,17 +51,19 @@ Init must be run first to create a session before the other commands can be used
   - Extra field (optional/may be blank)
 
   Encryption password selection is prompted. The encryption of the record will be as strong as this password.<br><br> 
-- get / decrypt / dec / fetch / show / load<br>
+- get / decrypt / dec / fetch / show / load [(title)]<br>
   Fetch a stored record to view. Same encryption password as when the record was stored must be entered.<br><br>  
-- list / search<br>
+- list / search [(title)]/[all]<br>
   Search for a record with partial name.<br><br>
-- delete / remove / del<br>
+- delete / remove / del [(title)]<br>
   Delete a record.<br><br>
 - update / change / edit<br>
   Change a record, e.g. change the password stored.<br>
   If the name of the record already exists, it's not possible to use "add" to overwrite, but this command must be used instead. 
 
 ## Web-app
+
+![screenshot](webapp/images/screenshot.png)
 
 The web-app is an alternative way of using the client. It also makes it easier to use pwmgr on mobile devices where terminals are rarely used.
 Since it only interacts with the terminal based client, it only needs the client part and can be run separately from the pwmgr server. 
