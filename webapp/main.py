@@ -35,7 +35,7 @@ def create_websession():
 # add page
 @app.route("/add", methods=['GET', 'POST'])
 def add():
-    global title, username, pw, extra, encryptionpw, encryptionpw2, overwrite, entity
+    global sessionuser, title, username, pw, extra, encryptionpw, encryptionpw2, overwrite, entity
     overwrite = False
 
     # ADD BUTTON
@@ -57,7 +57,7 @@ def add():
         return redirect("/")
 
     return (
-        render_template("add.html", title=title, username=username, pw=pw, extra=extra, encryptionpw=encryptionpw, encryptionpw2=encryptionpw2)
+        render_template("add.html", sessionuser=sessionuser, title=title, username=username, pw=pw, extra=extra, encryptionpw=encryptionpw, encryptionpw2=encryptionpw2)
     )
 
 
@@ -76,6 +76,7 @@ def index():
         encryptionpw = '\n'.join(map(str, request.form.getlist('encryptionpw'))).strip()
         title = '\n'.join(map(str, request.form.getlist('title'))).strip()
         entity = request.remote_addr + '-' + request.user_agent.string
+        new = False
 
         # field checks
         if not request.form['btn'] == 'Add' and (server == "" or sessionuser == "" or sessionpw == "" or title == ""):
@@ -86,7 +87,11 @@ def index():
         else:
             # run commands
             log('Creating session.')
-            if not commands.init(server, sessionuser, sessionpw):
+
+            # only allow creation of new user DB if "add" function is selected.
+            if request.form['btn'] == 'Add':
+                new = True
+            if not commands.init(server, sessionuser, sessionpw, new):
                 log("Error: Init failed.")
             else:
 

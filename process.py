@@ -46,9 +46,16 @@ def interpret_and_process(base64stringdata):
         try:
             sessionuser = base64.b64decode(base64.b64decode(decompresseddata.split(' ')[1])).decode('utf8').rstrip()
             sessionpw = base64.b64decode(base64.b64decode(decompresseddata.split(' ')[2])).decode('utf8').rstrip()
+            nonew = base64.b64decode(base64.b64decode(decompresseddata.split(' ')[3])).decode('utf8').rstrip()
         except Exception as b64decodeerror:
             print(f"Error: Unable to decode base64 data: {b64decodeerror}")
             returnmsg = "1 Invalid base64 data to decode."
+            return returnmsg
+
+        # only create new DB if nonew isn't set
+        if nonew and not file.file_exists(f'{config.db_path}/{sessionuser}.db'):
+            print(f"Error: nonew selected and user DB doesn't exist.")
+            returnmsg = "1 Error: nonew selected and user DB doesn't exist."
             return returnmsg
 
         # Create DB if non-existent
