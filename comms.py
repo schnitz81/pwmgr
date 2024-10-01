@@ -40,7 +40,13 @@ def tcp_listen_and_reply():
     if not bruteforcecheck.is_allowed_to_login(addr[0]):
         returnmsg = "1 Error: Client IP banned."
     else:
-        data = c.recv(4096)
+        try:
+            data = c.recv(4096)
+        except ConnectionResetError as conn_error:
+            print(f"Connection reset error: {conn_error}")
+            # disconnect the server
+            c.close()
+            return
 
         # generate response
         returnmsg = process.interpret_and_process(data)
