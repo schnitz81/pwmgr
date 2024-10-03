@@ -46,6 +46,7 @@ function decode_response() {
 
 function add_key_to_key_session() {
 	if [ -n "$(which keyctl 2>/dev/null)" ] ; then
+		keyctl link @u @s 1>/dev/null 2>&1  # link user and session keyring
 		if $(keyctl list @u | grep -v 'expired' | grep -q 'pwmgr'); then  # revoke old key session if existing
 			keyctl revoke $(keyctl search @u user pwmgr)
 		fi
@@ -66,6 +67,7 @@ function add_key_to_key_session() {
 
 function get_key_from_key_session() {
 	if [ -n "$(which keyctl 2>/dev/null)" ] ; then
+		keyctl link @u @s 1>/dev/null 2>&1  # link user and session keyring
 		if $(keyctl list @u | grep -v 'expired' | grep -q 'pwmgr'); then  # only fetch key if the key session exists
 			# check for error when using key
 			keyctl pipe $(keyctl search @u user pwmgr) 1>/dev/null  # test key fetching to detect any error
