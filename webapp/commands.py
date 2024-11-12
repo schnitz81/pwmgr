@@ -182,6 +182,12 @@ def add(title, username, pw, extra, encryptionpw, overwrite):
         child.sendline(f'{encryptionpw}')
         child.expect(r':\s*$')
         child.sendline(f'{encryptionpw}')
+
+        # Output pw similarity message before buffer read because exception will make later conditions miss it.
+        if pw == encryptionpw:
+            flash('Record password and encryption password can\'t be the same.')
+            print('Record password and encryption password can\'t be the same.')
+
         output = child.read().split('\n')
         print(f'add: {output}')
         for line in output:
