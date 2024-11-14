@@ -19,7 +19,7 @@ def test():
 
 def init(server, sessionuser, sessionpw, new):
     try:
-        flash('Init handshake...')
+        log('Init handshake...')
         if not new:
             child = pexpect.spawnu('pwmgr init --nonew', timeout=5, maxread=1, encoding='utf-8')
         else:
@@ -39,16 +39,16 @@ def init(server, sessionuser, sessionpw, new):
         print(f'init: {output}')
         for line in output:
             if 'nonew selected' in line:
-                flash('Entered user not found. Check username or create a new user by adding a new record.')
+                log('Entered user not found. Check username or create a new user by adding a new record.')
                 return False
             elif 'Server error' in line:
-                flash(line)
+                log(line)
                 return False
             elif 'Error:' in line:
-                flash(line)
+                log(line)
                 return False
             elif 'No previous credentials' in line:
-                flash('Session user not found. Created new user with entered session credentials.')
+                log('Session user not found. Created new user with entered session credentials.')
         if child.isalive():
             child.close()
         # Print the final state of the child. Normally isalive() should be FALSE.
@@ -70,8 +70,7 @@ def get(title, encryptionpw):
         respondalts = child.expect([r':\s*$', pexpect.TIMEOUT])
         if respondalts == 0:
             child.sendline(f'{encryptionpw}')
-        flash('Fetching...')
-        print('Fetching...')
+        log('Fetching...')
 
         child.read_nonblocking()
         output = child.read().split('\n')
@@ -79,15 +78,15 @@ def get(title, encryptionpw):
         print(f'get: data received from client, sorting fields...')
         for line in output:
             if 'Server error' in line:
-                flash(line)
+                log(line)
             elif 'can\'t be blank' in line:
-                flash('Name seems to be blank')
+                log('Name seems to be blank')
             elif 'Wrong encryption/decryption password' in line:
-                flash('Wrong encryption/decryption password')
+                log('Wrong encryption/decryption password')
             elif 'No matching record found' in line:
-                flash('No matching record found.')
+                log('No matching record found.')
             elif 'Specify exact title' in line:
-                flash('Partly matched titles found. Use search to list.')
+                log('Partly matched titles found. Use search to list.')
             elif 'title:' in line:
                 fetched_title = line.rsplit()[-1]
             elif 'username:' in line:
@@ -139,17 +138,16 @@ def search(title):
         child = pexpect.spawnu('pwmgr search', timeout=50, maxread=1, encoding='utf-8')
         child.expect(r':\s*$')
         child.sendline(f'{title}')
-        flash('Fetching...')
+        log('Fetching...')
         output = child.read().split('\n')
         print(f'search: {output}')
         for line in output:
             if 'Server error' in line:
-                flash(line)
+                log(line)
             elif 'Records found' in line:
                 found_records = True
             if found_records:
-                print(line)
-                flash(line)
+                log(line)
 
         if child.isalive():
             child.close()
@@ -166,8 +164,7 @@ def add(title, username, pw, extra, encryptionpw, overwrite):
     success = False
     try:
         child = pexpect.spawnu('pwmgr add', timeout=5, maxread=1, encoding='utf-8')
-        flash('Adding...')
-        print('Adding...')
+        log('Adding...')
         child.expect(r':\s*$')
         child.sendline(f'{title}')
         child.expect(r':\s*$')
@@ -185,24 +182,21 @@ def add(title, username, pw, extra, encryptionpw, overwrite):
 
         # Output pw similarity message before buffer read because exception will make later conditions miss it.
         if pw == encryptionpw:
-            flash('Record password and encryption password can\'t be the same.')
-            print('Record password and encryption password can\'t be the same.')
+            log('Record password and encryption password can\'t be the same.')
 
         output = child.read().split('\n')
         print(f'add: {output}')
         for line in output:
             if 'already exists' in line:
-                flash('Title already exists in DB.')
-                print('Title already exists in DB.')
+                log('Title already exists in DB.')
                 if overwrite:
-                    flash('Overwrite selected. Proceeding to update existing record.')
-                    print('Overwrite selected. Proceeding to update existing record.')
+                    log('Overwrite selected. Proceeding to update existing record.')
                     success = update(title, username, pw, extra, encryptionpw)
                     break
                 else:
-                    flash('Choose overwrite to update existing record.')
+                    log('Choose overwrite to update existing record.')
             elif 'error'.casefold() in line:
-                flash(line)
+                log(line)
                 success = False
             elif 'successfully' in line:
                 success = True
@@ -224,8 +218,7 @@ def update(title, username, pw, extra, encryptionpw):
     success = False
     try:
         child = pexpect.spawnu('pwmgr update', timeout=50, maxread=1, encoding='utf-8')
-        flash('Updating...')
-        print('Updating...')
+        log('Updating...')
         child.expect(r':\s*$')
         child.sendline(f'{title}')
         child.expect(r':\s*$')
@@ -244,7 +237,7 @@ def update(title, username, pw, extra, encryptionpw):
         print(f'update: {output}')
         for line in output:
             if 'error'.casefold() in line:
-                flash(line)
+                log(line)
                 success = False
             elif 'successfully' in line:
                 success = True
@@ -268,12 +261,12 @@ def delete(title):
         child = pexpect.spawnu('pwmgr delete', timeout=50, maxread=1, encoding='utf-8')
         child.expect(r':\s*$')
         child.sendline(f'{title}')
-        flash('Deleting...')
+        log('Deleting...')
         output = child.read().split('\n')
         print(f'delete: {output}')
         for line in output:
             if 'Server error' in line:
-                flash(line)
+                log(line)
             elif 'deleted' in line:
                 deleted = True
 
@@ -288,3 +281,8 @@ def delete(title):
 
     except Exception as delete_e:
         print(delete_e)
+
+
+def log(msg):
+    flash(msg)
+    print(msg)
