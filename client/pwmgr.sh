@@ -395,22 +395,29 @@ function get () {
 				echo -e "\nTesting key session password..."
 				verification=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 6 | openssl enc -chacha20 -md sha3-512 -a -d -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw" | tr -d '\0')
 			fi
-			if [ "$verification" != "verification" ]; then  # no valid encpw from key session, enter manually
+
+			# no valid encpw from key session, enter manually
+			if [ "$verification" != "verification" ]; then
 				echo ; read -s -p "Enter encryption password: " encryptionpw
 				if [ "$encryptionpw" == '' ]; then
 					echo -e "\nError: Encryption password can't be empty.\n"; exit 1
 				fi
+
+				# decrypt and verify verification string when entered manually
+				echo -e "\nTesting entered password..."
+				verification=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 6 | openssl enc -chacha20 -md sha3-512 -a -d -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw" | tr -d '\0')
+				if [ "$verification" != "verification" ]; then
+					echo -e "\nError: Wrong encryption/decryption password given. Unable to decrypt.\n"
+					exit 1
+				fi
 			fi
+
 			echo -e "\nDecrypting..."
 			title=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2)
 			username=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 3 | openssl enc -chacha20 -md sha3-512 -a -d -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw")
 			pw=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 4 | openssl enc -chacha20 -md sha3-512 -a -d -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw")
 			extra=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 5 | openssl enc -chacha20 -md sha3-512 -a -d -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw")
-			verification=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 6 | openssl enc -chacha20 -md sha3-512 -a -d -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw" | tr -d '\0')
-			if [ "$verification" != "verification" ]; then
-				echo -e "\nError: Wrong encryption/decryption password given. Unable to decrypt.\n"
-				exit 1
-			fi
+
 			echo
 			echo "title: $title"
 			echo "username: $username"
