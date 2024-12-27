@@ -404,7 +404,7 @@ function get () {
 				fi
 
 				# decrypt and verify verification string when entered manually
-				echo -e "\nTesting entered password..."
+				echo -e "\nTesting password..."
 				verification=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 6 | openssl enc -chacha20 -md sha3-512 -a -d -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw" | tr -d '\0')
 				if [ "$verification" != "verification" ]; then
 					echo -e "\nError: Wrong encryption/decryption password given. Unable to decrypt.\n"
@@ -434,8 +434,24 @@ function get () {
 			echo  # new line after terminal color reset
 			echo "extra info: $extra"
 			echo
+
 			# add encryption pw to key session
 			add_key_to_key_session "$encryptionpw"
+
+			# copy to X clipboard
+			if (( $copytoclipboard )); then
+				# check if xclip is installed
+				if [ -z "$(which xclip 2>/dev/null)" ]; then
+					echo -e "\nxclip not found. Password not copied.\n"
+				else
+					# send password to xclip
+					echo -n "$pw" | xclip -selection c -r
+					# check xclip response
+					if [[ $? -eq 0 ]]; then
+						echo -e "\nPassword copied to clipboard.\n"
+					fi
+				fi
+			fi
 			;;
 		3)
 			echo -e "\nPartly matched records found:\n"
@@ -643,7 +659,7 @@ $ pwmgr (parameter) [(title)]
 Init must be run first to create a session before the other commands can be
 used. This is the base of the client<->server interaction.
 
-	COMMANDS:
+COMMANDS:
 
 - init / config
 	Create a session. This creates a local session config and attempts to create
@@ -651,6 +667,9 @@ used. This is the base of the client<->server interaction.
 	Previous session password must match.
 	By entering the same sessionuser/sessionpassword multiple clients can be
 	used with the same server DB.
+	Optional:
+	--nonew  : Expect an already existing user DB in the server. Exit without
+	action if it's not found.
 
 - init-change / config-change
 	Change credentials of an existing session. Old credentials must be given for
@@ -672,9 +691,14 @@ used. This is the base of the client<->server interaction.
 - get / decrypt / dec / fetch / show / load [(title)]
 	Fetch a stored record to view. Same encryption password as when the record
 	was stored must be entered.
+	Optional:
+	-c / --copy  : Attempt to automatically copy password to the X clipboard
+	using xclip.
+	--nomask  : Don't mask the password in the output.
 
 - list / search [(title)]/[all]
-	Search for a record with partial name. Searching for "all" will list all records in DB.
+	Search for a record with partial name. Searching for "all" will list all
+	records in DB.
 
 - delete / remove / del [(title)]
 	Delete a record.
@@ -742,8 +766,12 @@ elif [ "$1" == "add" ] || [ "$1" == "encrypt" ] || [ "$1" == "enc" ] || [ "$1" =
 
 # get parameter input - run get procedure
 elif [ "$1" == "get" ] || [ "$1" == "decrypt" ] || [ "$1" == "dec" ] || [ "$1" == "fetch" ] || [ "$1" == "show" ] || [ "$1" == "load" ]; then
+	# copy to clipboard
+	if [[ $nbrOfParams -gt 2 ]] && ( [ "$3" == "-c" ] || [ "$4" == "-c" ] || [ "$3" == "--copy" ] || [ "$4" == "--copy" ]  ); then
+		copytoclipboard=1
+	fi
 	# password mask override
-	if [[ $nbrOfParams -gt 2 ]] && [ "$3" == "--nomask" ]; then
+	if [[ $nbrOfParams -gt 2 ]] && ( [ "$3" == "--nomask" ] || [ "$4" == "--nomask" ]  ); then
 		nomask=1
 	fi
 	get
