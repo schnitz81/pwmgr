@@ -12,7 +12,7 @@ function response_valid() {
 		echo -e "Error: Connection error. No server response.\n"; exit 1
 	elif [ -z "$response" ]; then
 		echo -e "Error: Server response empty.\n"; exit 1
-	elif [ "$(echo $response | wc -m)" -lt 5 ]; then
+	elif [ "${#response}" -lt 5 ]; then
 		echo -e "Error: Server response data too short: $response\n"; exit 1
 	elif [[ "$(echo -n "$response" | base64 -d 2>&1)" =~ "invalid" ]]; then
 		echo -e "Error: Server response is not valid base64 encoding: $response\n"; exit 1
@@ -21,17 +21,22 @@ function response_valid() {
 
 
 function b64swap() {
-	# charswap b64
+	# byteswap b64
 	local str=$1
-	if [ "$(echo $str | wc -m)" -lt 4 ]; then
+	if [ "${#str}" -lt 4 ]; then
 		echo -e "Error: b64 string too short to swap.\n"; exit 1
 	fi
-	local c1="${str:0:1}"
-	local c2="${str:1:1}"
-	local c3="${str:2:1}"
-	local endstr="${str:3}"
-	local generated_str="${c1}${c3}${c2}${endstr}"
-	echo -n "$generated_str"
+	local i=2
+	local looplimit=$((${#str}-2))
+	while [[ $i -lt $looplimit ]]; do
+		local beginstr="${str:0:$((i-1))}"
+		local c2="${str:$((i-1)):1}"
+		local c3="${str:$i:1}"
+		local endstr="${str:$((i+1))}"
+		str="${beginstr}${c3}${c2}${endstr}"
+		i=$((i+2))
+	done
+	echo -n "$str"
 }
 
 
