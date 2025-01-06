@@ -8,12 +8,12 @@ import zlib
 def b64swap(b64):
     if len(b64) > 4:
         b64str = b64.decode('utf-8')
-        i = 2
+        byteoffset = 2
         swappedb64 = b64str
-        while i < len(b64str) - 2:
+        while byteoffset < len(b64str) - 2:
             # byteswap
-            swappedb64 = swappedb64[:i - 1] + swappedb64[i] + swappedb64[i - 1] + swappedb64[i + 1:]
-            i = i + 2
+            swappedb64 = swappedb64[:byteoffset - 1] + swappedb64[byteoffset] + swappedb64[byteoffset - 1] + swappedb64[byteoffset + 1:]
+            byteoffset = byteoffset + 2
         swappedb64 = swappedb64.encode('utf-8')
         return swappedb64
     else:

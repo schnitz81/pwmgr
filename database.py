@@ -1,5 +1,6 @@
 import config
 import sqlite3
+import base64
 
 
 def create_connection(sessionuser):
@@ -58,7 +59,11 @@ def credentials_match(conn, sessionuser, sessionpw):
         c.execute("SELECT sessionuser FROM credentials")
         dbsessionuser = c.fetchone()[0]
         c.execute("SELECT sessionpw FROM credentials")
-        dbsessionpw = c.fetchone()[0]
+        dbsessionpwb64 = c.fetchone()[0]
+        try:
+            dbsessionpw = base64.b64decode(dbsessionpwb64).decode('utf8')
+        except Exception as b64_e:
+            print(b64_e)
         if dbsessionuser == sessionuser and dbsessionpw == sessionpw:
             return True
         else:
@@ -68,7 +73,14 @@ def credentials_match(conn, sessionuser, sessionpw):
 def store_credentials(conn, sessionuser, sessionpw):
     c = conn.cursor()
     try:
-        c.execute(f'''REPLACE INTO credentials (id, sessionuser, sessionpw) VALUES ('1', '{sessionuser}', '{sessionpw}');''')
+        sessionpwb64 = base64.b64encode(sessionpw.encode('utf-8'))
+        print(f"sessionpwb64: {sessionpwb64}")
+        sessionpwb64str = sessionpwb64.decode('utf-8')
+        print(f"sessionpwb64str: {sessionpwb64str}")
+    except Exception as b64_e:
+        print(b64_e)
+    try:
+        c.execute(f'''REPLACE INTO credentials (id, sessionuser, sessionpw) VALUES ('1', '{sessionuser}', '{sessionpwb64str}');''')
         return True
     except Exception as store_e:
         print(store_e)

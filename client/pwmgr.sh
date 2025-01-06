@@ -26,15 +26,15 @@ function b64swap() {
 	if [ "${#str}" -lt 4 ]; then
 		echo -e "Error: b64 string too short to swap.\n"; exit 1
 	fi
-	local i=2
+	local byteoffset=2
 	local looplimit=$((${#str}-2))
-	while [[ $i -lt $looplimit ]]; do
-		local beginstr="${str:0:$((i-1))}"
-		local c2="${str:$((i-1)):1}"
-		local c3="${str:$i:1}"
-		local endstr="${str:$((i+1))}"
+	while [[ $byteoffset -lt $looplimit ]]; do
+		local beginstr="${str:0:$((byteoffset-1))}"
+		local c2="${str:$((byteoffset-1)):1}"
+		local c3="${str:$byteoffset:1}"
+		local endstr="${str:$((byteoffset+1))}"
 		str="${beginstr}${c3}${c2}${endstr}"
-		i=$((i+2))
+		byteoffset=$((byteoffset+2))
 	done
 	echo -n "$str"
 }
@@ -117,8 +117,10 @@ function init () {
 	# create obligatory local session with user only permissions
 	touch "$SESSIONPATH" && chmod 0600 "$SESSIONPATH" || (res=$?; echo -e "\nError: Failed to create session."; (exit $res))
 	echo "$server" > "$SESSIONPATH"
-	echo "$username" | base64 | base64 >> "$SESSIONPATH"
-	echo "$sessionpw" | base64 | base64 >> "$SESSIONPATH"
+	echo -n "$username" | base64 -w0 | base64 -w0 >> "$SESSIONPATH"
+	echo >> "$SESSIONPATH"  # add newline
+	echo -n "$sessionpw" | base64 -w0 | base64 -w0 >> "$SESSIONPATH"
+	echo >> "$SESSIONPATH"  # add newline
 	echo
 
 	# align session with server and create a new user table if non-existent
@@ -126,7 +128,7 @@ function init () {
 	command="init"
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
-	nonew=$(echo -n "$nonew" | base64 | base64)
+	nonew=$(echo -n "$nonew" | base64 -w0 | base64 -w0)
 	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${nonew}" | gzip -1f | base64 -w0)
 	swapped_b64=$(b64swap "$unswapped_b64")
 	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
@@ -189,13 +191,16 @@ function init-change () {
 	mkdir -p "$(echo "$SESSIONPATH" | awk 'BEGIN{FS=OFS="/"}{NF--}1')"
 
 	# encode current credentials
-	sessionuser=$(echo -n "$sessionuser" | base64 | base64)
-	sessionpw=$(echo -n "$sessionpw" | base64 | base64)
+	sessionuser=$(echo -n "$sessionuser" | base64 -w0 | base64 -w0)
+	sessionpw=$(echo -n "$sessionpw" | base64 -w0 | base64 -w0)
 
 	# create local temp session
+	touch "$SESSIONPATH.tmp" && chmod 0600 "$SESSIONPATH.tmp" || (res=$?; echo -e "\nError: Failed to create temp session."; (exit $res))
 	echo "$server" > "$SESSIONPATH.tmp"
-	echo "$sessionnewuser" | base64 | base64 >> "$SESSIONPATH.tmp"
-	echo "$sessionnewpw" | base64 | base64 >> "$SESSIONPATH.tmp"
+	echo -n "$sessionnewuser" | base64 -w0 | base64 -w0 >> "$SESSIONPATH.tmp"
+	echo >> "$SESSIONPATH.tmp"  # add newline
+	echo -n "$sessionnewpw" | base64 -w0 | base64 -w0 >> "$SESSIONPATH.tmp"
+	echo >> "$SESSIONPATH.tmp"  # add newline
 	echo
 
 	# get new user and pw encoded
@@ -326,7 +331,7 @@ function add () {
 
 	# encrypt user and pw
 	echo -e "\nEncrypting..."
-	title=$(echo "$title" | base64 | base64)
+	title=$(echo "$title" | base64 -w0 | base64 -w0)
 	username=$(echo "$username" | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw" | tr -d "\n")
 	pw=$(echo "$pw" | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw" | tr -d "\n")
 	extra=$(echo "$extra" | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw" | tr -d "\n")
@@ -365,19 +370,19 @@ function add () {
 function get () {
 	sessioncheck
 	echo "Get record."
-	if [[ $nbrOfParams -gt 1 ]] ; then
+	if [[ -n "$title" ]]; then
 		echo -e "\nInput title is \"$title\""
 	else
 		echo ; read -p "Name/site/title to get: " title
 	fi
 
-	if [[ -z "$title" ]]; then
-		echo -e "Name can't be blank.\n"
+	if [[ -z "$title" ]]; then  # if title is not entered as parameter or prompt
+		echo -e "Record name can't be blank.\n"
 		exit 1
 	fi
 
 	command="get"
-	title=$(echo "$title" | base64 | base64)
+	title=$(echo "$title" | base64 -w0 | base64 -w0)
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
 
@@ -489,7 +494,7 @@ function list () {
 	fi
 
 	command="list"
-	title=$(echo "$title" | base64 | base64)
+	title=$(echo "$title" | base64 -w0 | base64 -w0)
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
 
@@ -538,7 +543,7 @@ function delete () {
 	fi
 
 	command="delete"
-	title=$(echo "$title" | base64 | base64)
+	title=$(echo "$title" | base64 -w0 | base64 -w0)
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
 
@@ -620,7 +625,7 @@ function update () {
 
 	# encrypt user and pw
 	echo -e "\nEncrypting..."
-	title=$(echo "$title" | base64 | base64)
+	title=$(echo "$title" | base64 -w0 | base64 -w0)
 	username=$(echo "$username" | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw" | tr -d "\n")
 	pw=$(echo "$pw" | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw" | tr -d "\n")
 	extra=$(echo "$extra" | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw" | tr -d "\n")
@@ -722,12 +727,15 @@ nbrOfParams=$#
 
 # set title to 2nd input parameter if given
 if [[ $nbrOfParams -gt 1 ]]; then
-	title=$2
+	# possible parameters that shouldn't be interpreted as a record title
+	if [ "$2" != "-c" ] && [ "$2" != "--copy" ] && [ "$2" != "--nomask" ]; then
+		title=$2
+	fi
 fi
 
 # check if netcat is installed
 if [ -z "$(which nc 2>/dev/null)" ]; then
-	echo "netcat not found. netcat-openbsd version needed."
+	echo "netcat not found. netcat-openbsd version of netcat needed."
 	exit 1
 fi
 
@@ -772,11 +780,11 @@ elif [ "$1" == "add" ] || [ "$1" == "encrypt" ] || [ "$1" == "enc" ] || [ "$1" =
 # get parameter input - run get procedure
 elif [ "$1" == "get" ] || [ "$1" == "decrypt" ] || [ "$1" == "dec" ] || [ "$1" == "fetch" ] || [ "$1" == "show" ] || [ "$1" == "load" ]; then
 	# copy to clipboard
-	if [[ $nbrOfParams -gt 2 ]] && ( [ "$3" == "-c" ] || [ "$4" == "-c" ] || [ "$3" == "--copy" ] || [ "$4" == "--copy" ]  ); then
+	if [ "$2" == "-c" ] || [ "$3" == "-c" ] || [ "$4" == "-c" ] || [ "$2" == "--copy" ] || [ "$3" == "--copy" ] || [ "$4" == "--copy" ]; then
 		copytoclipboard=1
 	fi
 	# password mask override
-	if [[ $nbrOfParams -gt 2 ]] && ( [ "$3" == "--nomask" ] || [ "$4" == "--nomask" ]  ); then
+	if [ "$2" == "--nomask" ] || [ "$3" == "--nomask" ] || [ "$4" == "--nomask" ]; then
 		nomask=1
 	fi
 	get
