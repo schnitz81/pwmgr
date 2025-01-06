@@ -41,7 +41,7 @@ def tcp_listen_and_reply():
         returnmsg = "1 Error: Client IP banned."
     else:
         try:
-            data = c.recv(4096)
+            data = c.recv(16384)
         except ConnectionResetError as conn_error:
             print(f"Connection reset error: {conn_error}")
             # disconnect the server
