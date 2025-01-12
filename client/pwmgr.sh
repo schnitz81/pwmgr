@@ -56,9 +56,9 @@ function add_key_to_key_session() {
 			keyctl revoke $(keyctl search @u user pwmgr)
 		fi
 		local encpw=$1
-		local b64sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1 | base64 -d)
+		local b64sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1 | base64 -d)  # get sessionpw from session file
 		if [ "$(echo $b64sessionpw | wc -m)" -gt 3 ]; then
-			local encpw_encrypted=$(echo "$encpw" | cut -d ' ' -f 3 | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 577372 -salt -pass pass:"$b64sessionpw")
+			local encpw_encrypted=$(encrypt "$encpw" "$b64sessionpw")
 			local b64_encpw_unswapped=$(echo -n "$encpw_encrypted" | base64 -w0)
 			local b64_encpw_swapped=$(b64swap "$b64_encpw_unswapped")
 			if [ $? -eq 0 ]; then  # write to session and set timeout if it was successfully created
@@ -81,11 +81,25 @@ function get_key_from_key_session() {
 				local b64_encpw_unswapped=$(keyctl pipe $(keyctl search @u user pwmgr))
 				local b64_encpw_swapped=$(b64swap "$b64_encpw_unswapped")
 				local encpw_encrypted=$(echo "$b64_encpw_swapped" | base64 -d)
-				local encpw=$(echo "$encpw_encrypted" | cut -d ' ' -f 3 | openssl enc -chacha20 -md sha3-512 -a -d -pbkdf2 -iter 577372 -salt -pass pass:"$b64sessionpw")
+				local encpw=$(decrypt "$encpw_encrypted" "$b64sessionpw")
 				echo -n "$encpw"
 			fi
 		fi
 	fi
+}
+
+
+function encrypt() {
+	local unencrypted_data="$1"
+	local encryptionpw="$2"
+	echo "$unencrypted_data" | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw" | tr -d "\n"
+}
+
+
+function decrypt() {
+	local encrypted_data="$1"
+	local encryptionpw="$2"
+	echo "$encrypted_data" | openssl enc -chacha20 -md sha3-512 -a -d -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw" | tr -d "\0"
 }
 
 
@@ -332,10 +346,10 @@ function add () {
 	# encrypt user and pw
 	echo -e "\nEncrypting..."
 	title=$(echo "$title" | base64 -w0 | base64 -w0)
-	username=$(echo "$username" | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw" | tr -d "\n")
-	pw=$(echo "$pw" | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw" | tr -d "\n")
-	extra=$(echo "$extra" | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw" | tr -d "\n")
-	verification=$(echo "verification" | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw" | tr -d "\n")
+	username=$(encrypt "$username" "$encryptionpw")
+	pw=$(encrypt "$pw" "$encryptionpw")
+	extra=$(encrypt "$extra" "$encryptionpw")
+	verification=$(encrypt "verification" "$encryptionpw")
 
 	command="add"
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
@@ -403,7 +417,7 @@ function get () {
 			encryptionpw=$(get_key_from_key_session)
 			if [ -n "$encryptionpw" ]; then
 				echo -e "\nTesting key session password..."
-				verification=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 6 | openssl enc -chacha20 -md sha3-512 -a -d -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw" | tr -d '\0')
+				verification=$(decrypt $(echo "$SERVERRESPONSE" | cut -d ' ' -f 6) "$encryptionpw")
 			fi
 
 			# no valid encpw from key session, enter manually
@@ -415,7 +429,7 @@ function get () {
 
 				# decrypt and verify verification string when entered manually
 				echo -e "\nTesting password..."
-				verification=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 6 | openssl enc -chacha20 -md sha3-512 -a -d -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw" | tr -d '\0')
+				verification=$(decrypt $(echo "$SERVERRESPONSE" | cut -d ' ' -f 6) "$encryptionpw")
 				if [ "$verification" != "verification" ]; then
 					echo -e "\nError: Wrong encryption/decryption password given. Unable to decrypt.\n"
 					exit 1
@@ -424,9 +438,9 @@ function get () {
 
 			echo -e "\nDecrypting..."
 			title=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2)
-			username=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 3 | openssl enc -chacha20 -md sha3-512 -a -d -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw")
-			pw=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 4 | openssl enc -chacha20 -md sha3-512 -a -d -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw")
-			extra=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 5 | openssl enc -chacha20 -md sha3-512 -a -d -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw")
+			username=$(decrypt $(echo "$SERVERRESPONSE" | cut -d ' ' -f 3) "$encryptionpw")
+			pw=$(decrypt $(echo "$SERVERRESPONSE" | cut -d ' ' -f 4) "$encryptionpw")
+			extra=$(decrypt $(echo "$SERVERRESPONSE" | cut -d ' ' -f 5) "$encryptionpw")
 
 			echo
 			echo "title: $title"
@@ -626,10 +640,10 @@ function update () {
 	# encrypt user and pw
 	echo -e "\nEncrypting..."
 	title=$(echo "$title" | base64 -w0 | base64 -w0)
-	username=$(echo "$username" | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw" | tr -d "\n")
-	pw=$(echo "$pw" | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw" | tr -d "\n")
-	extra=$(echo "$extra" | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw" | tr -d "\n")
-	verification=$(echo "verification" | openssl enc -chacha20 -md sha3-512 -a -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw" | tr -d "\n")
+	username=$(encrypt "$username" "$encryptionpw")
+	pw=$(encrypt "$pw" "$encryptionpw")
+	extra=$(encrypt "$extra" "$encryptionpw")
+	verification=$(encrypt "verification" "$encryptionpw")
 
 	command="update"
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
@@ -715,7 +729,7 @@ COMMANDS:
 
 - update / change / edit
 	Change a record, e.g. change the password stored. If the name of the record
-	already exists, it's not possible to use "add" to overwrite, but this command
+	already exists, it's not possible to use "add" to overwrite, so this command
 	must be used instead.
 
 END
