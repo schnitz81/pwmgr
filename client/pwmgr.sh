@@ -103,6 +103,15 @@ function decrypt() {
 }
 
 
+function add_newline_if_missing() {
+	# EOF newline handling for BSD compatibility
+	local filepath="$1"
+	if [ -n "$(tail -c 1 $filepath)" ]; then
+		printf "\n" >> "$filepath"  # add newline
+	fi
+}
+
+
 function init () {
 	echo ; read -p "Create new session? " configask
 	if [ "$configask" != 'y' ] && [ "$configask" != 'Y' ] && [ "$configask" != 'yes' ] && [ "$configask" != 'YES' ]; then
@@ -117,12 +126,12 @@ function init () {
 	if [ "$username" == '' ]; then
 		echo -e "\nError: session username can't be empty.\n"; exit 1
 	fi
-	echo ; read -s -p "Enter session password: " sessionpw
+	read -s -p "Enter session password: " sessionpw
 	echo ; read -s -p "Repeat session password: " sessionpw2
 	if [ "$sessionpw" != "$sessionpw2" ]; then
-		echo -e "\nError: passwords don't match.\n"; exit 1
+		echo -e "\n\nError: passwords don't match.\n"; exit 1
 	elif [ "$sessionpw" == '' ]; then
-		echo -e "\nError: session password can't be empty.\n"; exit 1
+		echo -e "\n\nError: session password can't be empty.\n"; exit 1
 	fi
 
 	# create folder for session file
@@ -132,13 +141,13 @@ function init () {
 	touch "$SESSIONPATH" && chmod 0600 "$SESSIONPATH" || (res=$?; echo -e "\nError: Failed to create session."; (exit $res))
 	echo "$server" > "$SESSIONPATH"
 	echo -n "$username" | base64 -w0 | base64 -w0 >> "$SESSIONPATH"
-	echo >> "$SESSIONPATH"  # add newline
+	add_newline_if_missing "$SESSIONPATH"
 	echo -n "$sessionpw" | base64 -w0 | base64 -w0 >> "$SESSIONPATH"
-	echo >> "$SESSIONPATH"  # add newline
+	add_newline_if_missing "$SESSIONPATH"
 	echo
 
 	# align session with server and create a new user table if non-existent
-	echo "Syncing server."
+	echo -e "\nSyncing server."
 	command="init"
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
@@ -182,23 +191,23 @@ function init-change () {
 	if [ "$sessionuser" == '' ]; then
 		echo -e "\nError: session username can't be empty.\n"; exit 1
 	fi
-	echo ; read -s -p "Enter CURRENT session password: " sessionpw
+	read -s -p "Enter CURRENT session password: " sessionpw
 	echo ; read -s -p "Repeat CURRENT session password: " sessionpw2
 	if [ "$sessionpw" != "$sessionpw2" ]; then
-		echo -e "\nError: passwords don't match.\n"; exit 1
+		echo -e "\n\nError: passwords don't match.\n"; exit 1
 	elif [ "$sessionpw" == '' ]; then
-		echo -e "\nError: session password can't be empty.\n"; exit 1
+		echo -e "\n\nError: session password can't be empty.\n"; exit 1
 	fi
-	echo ; read -p "Enter NEW session username: " sessionnewuser
+	echo ; echo ; read -p "Enter NEW session username: " sessionnewuser
 	if [ "$sessionnewuser" == '' ]; then
 		echo -e "\nError: session username can't be empty.\n"; exit 1
 	fi
-	echo ; read -s -p "Enter NEW session password: " sessionnewpw
+	read -s -p "Enter NEW session password: " sessionnewpw
 	echo ; read -s -p "Repeat NEW session password: " sessionnewpw2
 	if [ "$sessionnewpw" != "$sessionnewpw2" ]; then
-		echo -e "\nError: passwords don't match.\n"; exit 1
+		echo -e "\n\nError: passwords don't match.\n"; exit 1
 	elif [ "$sessionnewpw" == '' ]; then
-		echo -e "\nError: session password can't be empty.\n"; exit 1
+		echo -e "\n\nError: session password can't be empty.\n"; exit 1
 	fi
 
 	# create folder for session file
@@ -212,9 +221,9 @@ function init-change () {
 	touch "$SESSIONPATH.tmp" && chmod 0600 "$SESSIONPATH.tmp" || (res=$?; echo -e "\nError: Failed to create temp session."; (exit $res))
 	echo "$server" > "$SESSIONPATH.tmp"
 	echo -n "$sessionnewuser" | base64 -w0 | base64 -w0 >> "$SESSIONPATH.tmp"
-	echo >> "$SESSIONPATH.tmp"  # add newline
+	add_newline_if_missing "$SESSIONPATH.tmp"
 	echo -n "$sessionnewpw" | base64 -w0 | base64 -w0 >> "$SESSIONPATH.tmp"
-	echo >> "$SESSIONPATH.tmp"  # add newline
+	add_newline_if_missing "$SESSIONPATH.tmp"
 	echo
 
 	# get new user and pw encoded
@@ -222,7 +231,7 @@ function init-change () {
 	sessionnewpw=$(head -n 3 "$SESSIONPATH.tmp" | tail -n 1)
 
 	# align session with server and create a new user table if non-existent
-	echo "Syncing server."
+	echo -e "\nSyncing server."
 	command="init-change"
 	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${sessionnewuser}" "${sessionnewpw}" | gzip -1f | base64 -w0)
 	swapped_b64=$(b64swap "$unswapped_b64")
@@ -318,9 +327,9 @@ function add () {
 	echo ; read -s -p "Enter password: " pw
 	echo ; read -s -p "Repeat password: " pw2
 	if [ "$pw" != "$pw2" ]; then
-		echo -e "\nError: passwords don't match.\n"; exit 1
+		echo -e "\n\nError: passwords don't match.\n"; exit 1
 	elif [ "$pw" == '' ]; then
-		echo -e "\nError: session password can't be empty.\n"; exit 1
+		echo -e "\n\nError: session password can't be empty.\n"; exit 1
 	fi
 	echo ; read -p "Extra field (may be blank): " extra
 	while true; do
@@ -612,9 +621,9 @@ function update () {
 	echo ; read -s -p "Enter NEW password: " pw
 	echo ; read -s -p "Repeat NEW password: " pw2
 	if [ "$pw" != "$pw2" ]; then
-		echo -e "\nError: passwords don't match.\n"; exit 1
+		echo -e "\n\nError: passwords don't match.\n"; exit 1
 	elif [ "$pw" == '' ]; then
-		echo -e "\nError: session password can't be empty.\n"; exit 1
+		echo -e "\n\nError: session password can't be empty.\n"; exit 1
 	fi
 	echo ; read -p "Extra field (may be blank): " extra
 	while true; do
