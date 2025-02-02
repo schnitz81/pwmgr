@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 PORT=48222
 SESSIONPATH="$HOME/.config/pwmgr/.session"
@@ -447,44 +447,54 @@ function get () {
 
 			echo -e "\nDecrypting..."
 			title=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2)
-			username=$(decrypt $(echo "$SERVERRESPONSE" | cut -d ' ' -f 3) "$encryptionpw")
-			pw=$(decrypt $(echo "$SERVERRESPONSE" | cut -d ' ' -f 4) "$encryptionpw")
-			extra=$(decrypt $(echo "$SERVERRESPONSE" | cut -d ' ' -f 5) "$encryptionpw")
+			echo -e "\ntitle: $title"
 
-			echo
-			echo "title: $title"
-			echo "username: $username"
+			# multithreading for "get" command decryption ######
+			(  # extra process
+				(  # pw process
+					(  # username process
+						username=$(decrypt $(echo "$SERVERRESPONSE" | cut -d ' ' -f 3) "$encryptionpw")
+						echo "username: $username"
+					) &
+					pid_username=$!  # store PID of the username decryption and printout process
 
-			if (( $nomask )); then  # output password depending on nomask input parameter
-				echo "password: $pw"
-			else
-				echo -n "password (hidden): "
-				tput setaf 0 ; tput setb 0 ; tput setab 0  # hide password
-				echo -n "$pw"
-				tput sgr0  # reset terminal back to normal colors
-			fi
-
-			echo  # new line after terminal color reset
-			echo "extra info: $extra"
-			echo
-
-			# add encryption pw to key session
-			add_key_to_key_session "$encryptionpw"
-
-			# copy to X clipboard
-			if (( $copytoclipboard )); then
-				# check if xclip is installed
-				if [ -z "$(which xclip 2>/dev/null)" ]; then
-					echo -e "\nxclip not found. Password not copied.\n"
-				else
-					# send password to xclip
-					echo -n "$pw" | xclip -selection c -r
-					# check xclip response
-					if [[ $? -eq 0 ]]; then
-						echo -e "\nPassword copied to clipboard.\n"
+					pw=$(decrypt $(echo "$SERVERRESPONSE" | cut -d ' ' -f 4) "$encryptionpw")
+					wait $pid_username  # wait for username to be printed before printing pw output
+					if (( $nomask )); then  # output password depending on nomask input parameter
+						echo "password: $pw"
+					else
+						echo -n "password (hidden): "
+						tput setaf 0 ; tput setb 0 ; tput setab 0  # hide password
+						echo -n "$pw"
+						tput sgr0 ; echo # reset terminal back to normal colors
 					fi
-				fi
-			fi
+
+					# add encryption pw to key session
+					add_key_to_key_session "$encryptionpw"
+
+					# copy to X clipboard
+					if (( $copytoclipboard )); then
+						# check if xclip is installed
+						if [ -z "$(which xclip 2>/dev/null)" ]; then
+							echo -e "\nxclip not found. Password not copied.\n"
+						else
+							# send password to xclip
+							echo -n "$pw" | xclip -selection c -r
+							# check xclip response
+							if [[ $? -eq 0 ]]; then
+								echo -e "\nPassword copied to clipboard.\n"
+							fi
+						fi
+					fi
+				) &
+				pid_pw=$! # store PID of the pw decryption and printout process
+
+				extra=$(decrypt $(echo "$SERVERRESPONSE" | cut -d ' ' -f 5) "$encryptionpw")
+				wait $pid_pw  # wait for the pw printout before printing extra output
+				echo -e "extra info: $extra\n"
+			) &
+
+			wait # wait for muliprocess chain to finish
 			;;
 		3)
 			echo -e "\nPartly matched records found:\n"
