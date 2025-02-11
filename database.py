@@ -1,17 +1,44 @@
 import config
 import sqlite3
+from io import StringIO
+import file
 import base64
 
 
-def create_connection(sessionuser):
+def create_connection(sessionuser, sessionpw):
     # create db connection and create new db if both db and backup are missing
+    print(f"Creating inmem db.")
     conn = None
     try:
-        conn = sqlite3.connect(f'{config.db_path}/{sessionuser}.db', timeout=12)
-        return conn
+        conn = sqlite3.connect(":memory:")
     except Exception as e:
         print(e)
         conn.close()
+    # read db file, decrypt and read into inmem sqlite db
+    if file.file_exists(f'{config.db_path}/{sessionuser}.encdb'):  # encrypted .encdb file
+        try:
+            print(f"{sessionuser}.encdb file exists. Decrypting and reading.")
+            memfile = StringIO()
+            decrypted_data = file.read_and_decrypt_file(f'{config.db_path}/{sessionuser}.encdb', sessionpw)
+            memfile.write(decrypted_data)
+            memfile.seek(0)
+            conn.cursor().executescript(memfile.read())
+            conn.commit()
+        except Exception as read_encrypted_db_to_mem_e:
+            print(f"DB decryption error: {read_encrypted_db_to_mem_e}")
+            conn.close()
+    # read unencrypted .db file if it's the only db file with the user name available
+    elif file.file_exists(f'{config.db_path}/{sessionuser}.db'):
+        try:
+            print(f"{sessionuser}.encdb db file not found. but {sessionuser}.db found. Reading as unencrypted db file.")
+            unenc_db_conn = sqlite3.connect(f'{config.db_path}/{sessionuser}.db', timeout=12)
+            unenc_db_conn.backup(conn)
+            conn.commit()
+            unenc_db_conn.close()
+            write_inmem_db_to_file(conn, sessionuser, sessionpw)
+        except Exception as read_unencrypted_db_to_mem_e:
+            print(read_unencrypted_db_to_mem_e)
+            conn.close()
     return conn
 
 
@@ -59,9 +86,9 @@ def credentials_match(conn, sessionuser, sessionpw):
         c.execute("SELECT sessionuser FROM credentials")
         dbsessionuser = c.fetchone()[0]
         c.execute("SELECT sessionpw FROM credentials")
-        dbsessionpwb64 = c.fetchone()[0]
+        dbsessionpw_b64 = c.fetchone()[0]
         try:
-            dbsessionpw = base64.b64decode(dbsessionpwb64).decode('utf8')
+            dbsessionpw = base64.b64decode(dbsessionpw_b64).decode('utf8')
         except Exception as b64_e:
             print(b64_e)
         if dbsessionuser == sessionuser and dbsessionpw == sessionpw:
@@ -73,14 +100,12 @@ def credentials_match(conn, sessionuser, sessionpw):
 def store_credentials(conn, sessionuser, sessionpw):
     c = conn.cursor()
     try:
-        sessionpwb64 = base64.b64encode(sessionpw.encode('utf-8'))
-        print(f"sessionpwb64: {sessionpwb64}")
-        sessionpwb64str = sessionpwb64.decode('utf-8')
-        print(f"sessionpwb64str: {sessionpwb64str}")
+        sessionpw_b64 = base64.b64encode(sessionpw.encode('utf-8'))
+        sessionpw_b64_str = sessionpw_b64.decode('utf-8')
     except Exception as b64_e:
         print(b64_e)
     try:
-        c.execute(f'''REPLACE INTO credentials (id, sessionuser, sessionpw) VALUES ('1', '{sessionuser}', '{sessionpwb64str}');''')
+        c.execute(f'''REPLACE INTO credentials (id, sessionuser, sessionpw) VALUES ('1', '{sessionuser}', '{sessionpw_b64_str}');''')
         return True
     except Exception as store_e:
         print(store_e)
@@ -111,9 +136,9 @@ def get_title_case_spelling(conn, title):
     c = conn.cursor()
     with conn:
         c.execute(f'''SELECT title FROM records WHERE title='{title}' COLLATE NOCASE;''')
-        actualTitle = c.fetchone()[0]
-        if actualTitle:
-            return actualTitle
+        actual_title = c.fetchone()[0]
+        if actual_title:
+            return actual_title
         else:
             return False
 
@@ -122,16 +147,16 @@ def nbr_of_title_hits(conn, title):
     c = conn.cursor()
     with conn:
         c.execute(f'''SELECT COUNT(title) FROM records WHERE title LIKE '%{title}%' COLLATE NOCASE;''')
-        nbrOfhits = c.fetchone()[0]
-        return nbrOfhits
+        nbr_of_hits = c.fetchone()[0]
+        return nbr_of_hits
 
 
 def list_partial_title_records(conn, title):
     c = conn.cursor()
     with conn:
         c.execute(f'''SELECT title FROM records WHERE title LIKE '%{title}%' COLLATE NOCASE;''')
-        dbvals = c.fetchall()
-        strlist = ' '.join(map(','.join, dbvals))
+        db_values = c.fetchall()
+        strlist = ' '.join(map(','.join, db_values))
         print(strlist)
         return strlist
 
@@ -140,8 +165,8 @@ def list_all_title_records(conn, title):
     c = conn.cursor()
     with conn:
         c.execute(f'''SELECT title FROM records;''')
-        dbvals = c.fetchall()
-        strlist = ' '.join(map(','.join, dbvals))
+        db_values = c.fetchall()
+        strlist = ' '.join(map(','.join, db_values))
         print(strlist)
         return strlist
 
@@ -161,7 +186,26 @@ def delete_record(conn, title):
         c.execute(f'''DELETE FROM records WHERE title='{title}' COLLATE NOCASE;''')
         return True
     except Exception as deleterecord_e:
-        print(f"Error: Unable to delete db record {title}")
+        print(f"Error: Unable to delete db record {title}: {deleterecord_e}")
+        return False
+
+
+def write_inmem_db_to_file(conn, sessionuser, sessionpw):
+    try:
+        conn.commit()  # settling db before file writing
+        print("Encrypting and saving to file.")
+        memfile = StringIO()
+        for line in conn.iterdump():
+            memfile.write('%s\n' % line)
+        memfile.seek(0)
+        db_encryption_rtn_code = file.encrypt_and_write_file(memfile.read(), f'{config.db_path}/{sessionuser}.encdb', sessionpw)
+        if db_encryption_rtn_code == 0:
+            return True
+        else:
+            return False
+    except Exception as e:
+        print(e)
+        conn.close()
         return False
 
 

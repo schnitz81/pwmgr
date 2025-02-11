@@ -101,6 +101,10 @@ def get(title, encryptionpw):
         # title output crop fix
         if fetched_title == '' and 'username:' in output[1]:
             fetched_title = output[0]
+        elif fetched_title == '' and 'username:' in output[2]:
+            fetched_title = output[0]
+
+        print(f"fetched title: {fetched_title}")
 
         if child.isalive():
             child.close()
