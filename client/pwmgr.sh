@@ -135,26 +135,26 @@ function init () {
 	fi
 
 	# create folder for session file
-	mkdir -p -m 0700 "$(echo "$SESSIONPATH" | awk 'BEGIN{FS=OFS="/"}{NF--}1')"
+	mkdir -p -m 0700 "$(echo "$SESSIONPATH.tmp" | awk 'BEGIN{FS=OFS="/"}{NF--}1')"
 
-	# create obligatory local session with user only permissions
-	touch "$SESSIONPATH" && chmod 0600 "$SESSIONPATH" || (res=$?; echo -e "\nError: Failed to create session."; (exit $res))
-	echo "$server" > "$SESSIONPATH"
-	echo -n "$username" | base64 -w0 | base64 -w0 >> "$SESSIONPATH"
-	add_newline_if_missing "$SESSIONPATH"
-	echo -n "$sessionpw" | base64 -w0 | base64 -w0 >> "$SESSIONPATH"
-	add_newline_if_missing "$SESSIONPATH"
+	# create local session with user only permissions
+	touch "$SESSIONPATH.tmp" && chmod 0600 "$SESSIONPATH.tmp" || (res=$?; echo -e "\nError: Failed to create session."; (exit $res))
+	echo "$server" > "$SESSIONPATH.tmp"
+	echo -n "$username" | base64 -w0 | base64 -w0 >> "$SESSIONPATH.tmp"
+	add_newline_if_missing "$SESSIONPATH.tmp"
+	echo -n "$sessionpw" | base64 -w0 | base64 -w0 >> "$SESSIONPATH.tmp"
+	add_newline_if_missing "$SESSIONPATH.tmp"
 	echo
 
 	# align session with server and create a new user table if non-existent
 	echo -e "\nSyncing server."
 	command="init"
-	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
-	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
+	sessionuser=$(head -n 2 "$SESSIONPATH.tmp" | tail -n 1)
+	sessionpw=$(head -n 3 "$SESSIONPATH.tmp" | tail -n 1)
 	nonew=$(echo -n "$nonew" | base64 -w0 | base64 -w0)
 	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${nonew}" | gzip -1f | base64 -w0)
 	swapped_b64=$(b64swap "$unswapped_b64")
-	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
+	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -N -w 5 "$(head -n 1 "$SESSIONPATH.tmp")" $PORT)
 	response_valid $? $SERVERRESPONSE
 	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
 
@@ -165,6 +165,12 @@ function init () {
 			;;
 		2)
 			echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
+			# activate local session
+			mv "$SESSIONPATH.tmp" "$SESSIONPATH"
+			if [ $? != 0 ]; then
+				echo -e "Error: Local session activation unsuccessful.\n"
+				exit 1
+			fi
 			echo "Local session and remote server DB aligned successfully."
 			echo
 			;;

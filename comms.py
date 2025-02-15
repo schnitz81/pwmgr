@@ -34,7 +34,7 @@ def tcp_listen_and_reply():
 
     # display client address
     print("------------------------------------")
-    print("connection from:", str(addr))
+    print("Connection from:", str(addr))
 
     # check IP ban
     if not bruteforcecheck.is_allowed_to_login(addr[0]):

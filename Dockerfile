@@ -5,8 +5,9 @@ LABEL maintainer="schnitz81"
 LABEL description="Server for pwmgr, a centralized password manager with distributed encryption."
 LABEL url="https://github.com/schnitz81/pwmgr"
 
-RUN mkdir /pwmgr \
-&& mkdir /db
+RUN apk --no-cache update && apk add --no-cache openssl \
+    && mkdir /pwmgr \
+    && mkdir /db
 
 ADD *.py /pwmgr/
 
