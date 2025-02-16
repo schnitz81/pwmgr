@@ -2,7 +2,7 @@ import config
 import sqlite3
 from io import StringIO
 import file
-import base64
+import hashlib
 
 
 def create_connection(sessionuser, sessionpw):
@@ -86,12 +86,12 @@ def credentials_match(conn, sessionuser, sessionpw):
         c.execute("SELECT sessionuser FROM credentials")
         dbsessionuser = c.fetchone()[0]
         c.execute("SELECT sessionpw FROM credentials")
-        dbsessionpw_b64 = c.fetchone()[0]
         try:
-            dbsessionpw = base64.b64decode(dbsessionpw_b64).decode('utf8')
-        except Exception as b64_e:
-            print(b64_e)
-        if dbsessionuser == sessionuser and dbsessionpw == sessionpw:
+            hashed_dbsessionpw = c.fetchone()[0]
+            hashed_sessionpw = hashlib.sha3_512(sessionpw.encode()).hexdigest()
+        except Exception as hashpw_e:
+            print(hashpw_e)
+        if dbsessionuser == sessionuser and hashed_dbsessionpw == hashed_sessionpw:
             return True
         else:
             return False
@@ -100,12 +100,11 @@ def credentials_match(conn, sessionuser, sessionpw):
 def store_credentials(conn, sessionuser, sessionpw):
     c = conn.cursor()
     try:
-        sessionpw_b64 = base64.b64encode(sessionpw.encode('utf-8'))
-        sessionpw_b64_str = sessionpw_b64.decode('utf-8')
-    except Exception as b64_e:
-        print(b64_e)
+        hashed_sessionpw = hashlib.sha3_512(sessionpw.encode()).hexdigest()
+    except Exception as hashpw_e:
+        print(hashpw_e)
     try:
-        c.execute(f'''REPLACE INTO credentials (id, sessionuser, sessionpw) VALUES ('1', '{sessionuser}', '{sessionpw_b64_str}');''')
+        c.execute(f'''REPLACE INTO credentials (id, sessionuser, sessionpw) VALUES ('1', '{sessionuser}', '{hashed_sessionpw}');''')
         return True
     except Exception as store_e:
         print(store_e)
