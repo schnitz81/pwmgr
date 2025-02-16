@@ -3,6 +3,7 @@ import database
 import file
 import config
 import zlib
+import comms
 
 
 def connected_to_db(conn):
@@ -49,8 +50,7 @@ def interpret_and_process(base64_stringdata):
         returnmsg = "1 Decompress error."
         return returnmsg
 
-    # only uncomment next line when debugging, gives unencrypted log records of received data
-    #print(decompressed_data)
+    comms.log(decompressed_data)
 
     # interpret received command
     command = decompressed_data.split(' ')[0]

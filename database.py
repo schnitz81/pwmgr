@@ -3,6 +3,7 @@ import sqlite3
 from io import StringIO
 import file
 import hashlib
+import comms
 
 
 def create_connection(sessionuser, sessionpw):
@@ -156,7 +157,7 @@ def list_partial_title_records(conn, title):
         c.execute(f'''SELECT title FROM records WHERE title LIKE '%{title}%' COLLATE NOCASE;''')
         db_values = c.fetchall()
         strlist = ' '.join(map(','.join, db_values))
-        print(strlist)
+        comms.log(strlist)
         return strlist
 
 
@@ -166,7 +167,7 @@ def list_all_title_records(conn, title):
         c.execute(f'''SELECT title FROM records;''')
         db_values = c.fetchall()
         strlist = ' '.join(map(','.join, db_values))
-        print(strlist)
+        comms.log(strlist)
         return strlist
 
 
@@ -175,7 +176,7 @@ def get_record(conn, title):
     with conn:
         c.execute(f'''SELECT * FROM records WHERE title='{title}' COLLATE NOCASE;''')
         strlist = ' '.join(c.fetchone())
-        print(strlist)
+        comms.log(strlist)
         return strlist
 
 
