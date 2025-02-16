@@ -79,7 +79,7 @@ def get(title, encryptionpw):
         for line in output:
             if 'Server error' in line:
                 log(line)
-            elif 'can\'t be blank' in line:
+            elif 'name can\'t be blank' in line:
                 log('Name seems to be blank')
             elif 'Wrong encryption/decryption password' in line:
                 log('Wrong encryption/decryption password')

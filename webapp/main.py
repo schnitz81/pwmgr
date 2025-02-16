@@ -47,6 +47,17 @@ def add():
         encryptionpw = '\n'.join(map(str, request.form.getlist('encryptionpw'))).strip()
         encryptionpw2 = '\n'.join(map(str, request.form.getlist('encryptionpw2'))).strip()
 
+        if username == "":
+            log("Username can't be empty.")
+        elif pw == "":
+            log("Password can't be empty.")
+        elif encryptionpw == "":
+            log("Encryption password can't be empty.")
+        elif encryptionpw2 == "":
+            log("Encryption password confirmation can't be empty.")
+        elif encryptionpw != encryptionpw2:
+            log("Encryption password confirmation is different.")
+
         if request.form['btn'] == 'Overwrite':
             overwrite = True
 
@@ -80,9 +91,11 @@ def index():
 
         # field checks
         if not request.form['btn'] == 'Add' and (server == "" or sessionuser == "" or sessionpw == "" or title == ""):
-            log("Server, user, session password and title need to be filled")
+            log("Server, user, session password and title need to be filled.")
         elif request.form['btn'] == 'Add' and (server == "" or sessionuser == "" or sessionpw == ""):
             log("Server, user and session password need to be filled when adding new record.")
+        elif encryptionpw == "" and request.form['btn'] == 'Get':
+            log("Encryption password can't be empty when using 'get'.")
 
         else:
             # run commands
