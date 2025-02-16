@@ -55,7 +55,7 @@ def tcp_listen_and_reply():
         for i in range(len(FAILSTRINGS)):
             if FAILSTRINGS[i] in returnmsg:
                 bruteforcecheck.failed_auth(addr[0])
-    print(returnmsg)
+    log(returnmsg)
 
     try:
         # encode response
@@ -64,7 +64,7 @@ def tcp_listen_and_reply():
         print(returnmsg_e)
         returnmsg = f"1 {returnmsg_e}"
         returnmsg = base64.b64encode(process.b64swap(base64.b64encode(zlib.compress(returnmsg.encode("utf-8"), 1, wbits=zlib.MAX_WBITS | 16))))
-    print(f"Parsed returnmsg: {returnmsg}")
+    log(f"Parsed returnmsg: {returnmsg}")
 
     try:
         c.send(returnmsg)
@@ -72,6 +72,10 @@ def tcp_listen_and_reply():
     except Exception as send_e:
         print("Response send error:")
         print(send_e)
-
     # disconnect the server
     c.close()
+
+
+def log(msg):
+    if config.verbose_output.casefold() == 'true' or config.verbose_output.casefold() == 1 or config.verbose_output.casefold() == 'yes':
+        print(msg)
