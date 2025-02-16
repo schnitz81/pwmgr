@@ -209,6 +209,19 @@ def write_inmem_db_to_file(conn, sessionuser, sessionpw):
         return False
 
 
+def write_inmem_db_to_file_unencrypted(conn, sessionuser):
+    # write inmem DB to file
+    try:
+        unenc_db_conn = sqlite3.connect(f'{config.db_path}/{sessionuser}.db', timeout=12)
+        conn.backup(unenc_db_conn)
+        unenc_db_conn.close()
+        return True
+    except Exception as read_unencrypted_db_to_mem_e:
+        print(read_unencrypted_db_to_mem_e)
+        conn.close()
+        return False
+
+
 def close_connection(conn):
     conn.commit()
     print("Disconnecting from db.")

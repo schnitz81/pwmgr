@@ -171,7 +171,7 @@ function init () {
 				echo -e "Error: Local session activation unsuccessful.\n"
 				exit 1
 			fi
-			echo "Local session and remote server DB aligned successfully."
+			echo "Success: Local session and remote server DB aligned successfully."
 			echo
 			;;
 		*)
@@ -700,6 +700,40 @@ function update () {
 }
 
 
+function backup () {
+	sessioncheck
+	echo "Decrypt and backup database file."
+
+	command="backup"
+	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
+	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
+
+	echo -e "\nChecking status..."
+	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" | gzip -1f | base64 -w0)
+	swapped_b64=$(b64swap "$unswapped_b64")
+	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
+	response_valid $? $SERVERRESPONSE
+	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
+
+	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
+		1)
+			echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
+			echo
+			;;
+		2)
+			echo -e "\nServer response OK:"
+			echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
+			echo
+			;;
+		*)
+			echo "Unknown error:"
+			echo "$SERVERRESPONSE"
+			echo
+			;;
+	esac
+}
+
+
 function helptext () {  # Help text diplayed if no or non-existent input parameter is given.
 	cat <<'END'
 Run command:
@@ -712,10 +746,13 @@ COMMANDS:
 
 - init / config
 	Create a session. This creates a local session config and attempts to create
-	a remote server	db session. If the username db already exists, it's reused.
-	Previous session password must match.
-	By entering the same sessionuser/sessionpassword multiple clients can be
-	used with the same server DB.
+	a remote server	database file. If the [user].encdb already exists, it's reused.
+	Previous session password must match to reconnect a database file to a new
+	session.
+	By entering the same session credentials, multiple clients can be used with
+	the same server DB.
+	If a [user].encdb is missing in the db_path, importing an unencrypted
+	[user].db file will be attempted instead.
 	Optional:
 	--nonew  : Expect an already existing user DB in the server. Exit without
 	action if it's not found.
@@ -757,6 +794,11 @@ COMMANDS:
 	already exists, it's not possible to use "add" to overwrite, so this command
 	must be used instead.
 
+- backup / dump
+	Use current session to the associated encrypted .encdb DB file and dump it to
+	an unencrypted .db file. For backup or debugging purposes. The [user].db format
+	file will automatically be imported and converted to .encdb when running "init"
+	if no [user].encdb file is found in the db_path.
 END
 }
 
@@ -839,6 +881,10 @@ elif [ "$1" == "delete" ] || [ "$1" == "remove" ] || [ "$1" == "del" ]; then
 # update parameter input - run get procedure
 elif [ "$1" == "update" ] || [ "$1" == "change" ] || [ "$1" == "edit" ]; then
 	update
+
+# backup parameter input - run backup procedure
+elif [ "$1" == "backup" ] || [ "$1" == "dump" ]; then
+	backup
 
 else
 	helptext
