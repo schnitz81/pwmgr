@@ -4,7 +4,9 @@ import process
 import base64
 import zlib
 import bruteforcecheck
+import os
 
+from config import verbose_output
 
 FAILSTRINGS = [
     "password is wrong",
@@ -16,9 +18,25 @@ FAILSTRINGS = [
 
 def tcp_listen_and_reply():
 
-    # take the server name and port name
-    host = config.host
-    port = config.port
+    # set the server name and port name from env var if existing, otherwise config file
+    port = None
+    host = None
+    if 'PORT' in os.environ:  # port var
+        port = int(os.environ['PORT'])
+    else:
+        try:
+            port = int(config.port)
+        except:
+            print("Error: Port number needs to be defined in either config file or as PORT env variable.")
+            exit(1)
+    if 'HOST' in os.environ:  # host var
+        host = os.environ['HOST']
+    else:
+        try:
+            host = config.host
+        except:
+            print("Error: Host address needs to be defined in either config file ('host') or as HOST env variable.")
+            exit(1)
 
     # create a socket
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -77,5 +95,18 @@ def tcp_listen_and_reply():
 
 
 def log(msg):
-    if config.verbose_output.casefold() == 'true' or config.verbose_output.casefold() == 1 or config.verbose_output.casefold() == 'yes':
+    # set verbose output from env var if existing, otherwise config file
+    verbose_output = None
+    if 'VERBOSE_OUTPUT' in os.environ:
+        if os.environ['VERBOSE_OUTPUT'].casefold() == 'true' or os.environ['VERBOSE_OUTPUT'] == 1 or os.environ['VERBOSE_OUTPUT'].casefold() == 'yes':
+            verbose_output = True
+    else:
+        try:
+            if config.verbose_output.casefold() == 'true' or config.verbose_output == 1 or config.verbose_output.casefold() == 'yes':
+                verbose_output = True
+        except NameError:
+            print("Error: verbose_output needs to be defined as true/false in either config file or as VERBOSE_OUTPUT env variable.")
+            exit(1)
+
+    if verbose_output:
         print(msg)

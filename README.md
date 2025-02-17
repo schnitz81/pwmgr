@@ -61,6 +61,16 @@ Init must be run first to create a session before the other commands can be used
   Change a record, e.g. change the password stored.<br>
   If the name of the record already exists, it's not possible to use "add" to overwrite, but this command must be used instead. 
 
+### Environment variables
+
+Some of the config file settings can be overridden by env variables. This is especially useful for the Docker image.<br>
+```HOST=0.0.0.0```<br>
+```PORT=48222```<br>
+```VERBOSE_OUTPUT=false```<br>
+
+These can be used when running Docker/Podman:<br>
+```-e VERBOSE_OUTPUT=false```<br>
+
 ## Web-app
 
 ![screenshot](webapp/images/screenshot.png)
