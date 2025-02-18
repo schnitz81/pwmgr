@@ -89,7 +89,8 @@ def interpret_and_process(base64_stringdata):
         if database.credentials_exist(conn):
             # check if received credentials match db
             if database.credentials_match(conn, sessionuser, sessionpw):
-                returnmsg = f"2 Credentials match previous record. Reusing server DB for '{sessionuser}'."
+                print("Init matched existing credentials in DB.")
+                returnmsg = f"2 Credentials match previous record in DB. Reusing server DB for '{sessionuser}'."
             # received credentials don't match
             else:
                 returnmsg = f"1 User DB for '{sessionuser}' exists in server but provided password is wrong."
@@ -101,6 +102,7 @@ def interpret_and_process(base64_stringdata):
             if not db_written:
                 returnmsg = f"1 Unable to write server DB to disk ({config.db_path}/{sessionuser}.encdb)."
             elif credentials_stored:
+                print("Stored new credentials.")
                 returnmsg = f"2 No previous credentials for user '{sessionuser}' in DB. Saving."
             else:
                 returnmsg = "1 Credentials storing unsuccessful."
@@ -158,7 +160,8 @@ def interpret_and_process(base64_stringdata):
 
             # return rename and credentials change result
             if credentials_stored and dbfile_renamed and db_written:
-                returnmsg = f"2 Old credentials overwritten and db file renamed successfully ({sessionuser} -> {sessionnewuser})."
+                print("Credentials overwritten and DB file renamed.")
+                returnmsg = f"2 Old credentials overwritten and DB file renamed successfully ({sessionuser} -> {sessionnewuser})."
             elif not credentials_stored:
                 returnmsg = "1 Credentials storing unsuccessful."
             elif credentials_stored and not dbfile_renamed:
@@ -194,6 +197,7 @@ def interpret_and_process(base64_stringdata):
         elif not database.credentials_match(conn, sessionuser, sessionpw):
             returnmsg = f"1 Session credentials don't match server DB file ({config.db_path}/{sessionuser}.encdb)."
         else:
+            print("Session check valid.")
             returnmsg = f"2 Success: Session check successful against server DB ({config.db_path}/{sessionuser}.encdb)."
         database.close_connection(conn)
         return returnmsg
@@ -267,8 +271,10 @@ def interpret_and_process(base64_stringdata):
                     if not db_written:
                         returnmsg = "1 Unable to write changed DB to disk."
                     elif command == 'add':  # return message depending on command used
+                        print("Record added to DB.")
                         returnmsg = "2 Record stored in DB successfully."
                     else:  # update command used
+                        print("Record updated in DB.")
                         returnmsg = "2 Record updated in DB successfully."
                 else:
                     returnmsg = "1 Record storing unsuccessful."
@@ -315,9 +321,11 @@ def interpret_and_process(base64_stringdata):
         # get record, exact match or multimatch suggestions
         elif database.exact_title_exists(conn, title):
             record = database.get_record(conn, title)
+            print("Record queried from DB.")
             returnmsg = f"2 {record}"
         elif database.nbr_of_title_hits(conn, title) >= 1:
             records = database.list_partial_title_records(conn, title)
+            print("Partial match(es) only. List of partial matches queried from DB.")
             returnmsg = f"3 {records}"
         elif database.nbr_of_title_hits(conn, title) < 1:
             returnmsg = "1 No matching record found."
@@ -366,11 +374,13 @@ def interpret_and_process(base64_stringdata):
         # if list all is requested
         elif title.casefold() == 'all'.casefold():
             records = database.list_all_title_records(conn, title)
+            print("List of all record titles queried from DB.")
             returnmsg = f"3 {records}"
 
         # always get multimatch suggestions
         elif database.nbr_of_title_hits(conn, title) >= 1:
             records = database.list_partial_title_records(conn, title)
+            print("List of partial matches queried from DB.")
             returnmsg = f"3 {records}"
         elif database.nbr_of_title_hits(conn, title) < 1:
             returnmsg = "1 No matching record found."
@@ -423,13 +433,15 @@ def interpret_and_process(base64_stringdata):
             if not db_written:
                 returnmsg = "1 Unable to write changed DB to disk."
             elif record_deleted:
-                returnmsg = "2 Record deleted."
+                print("Record deleted from DB.")
+                returnmsg = "2 Record deleted from DB."
             else:
                 returnmsg = "1 Error when deleting record from DB."
 
         # always get multimatch suggestions
         elif database.nbr_of_title_hits(conn, title) >= 1:
             records = database.list_partial_title_records(conn, title)
+            print("Partial match(es) only. List of partial matches queried from DB instead of deleting.")
             returnmsg = f"3 {records}"
         elif database.nbr_of_title_hits(conn, title) < 1:
             returnmsg = "1 No matching record found."
@@ -468,6 +480,7 @@ def interpret_and_process(base64_stringdata):
         else:
             # dump DB into unencrypted file
             if database.write_inmem_db_to_file_unencrypted(conn, sessionuser):
+                print(f"Decrypted DB file saved to {config.db_path}/{sessionuser}.db")
                 returnmsg = f"2 Database successfully backed up to {config.db_path}/{sessionuser}.db in server."
             else:
                 returnmsg = f"1 Unable to backup database as unencrypted to {config.db_path}/{sessionuser}.db in server."
