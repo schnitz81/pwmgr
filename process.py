@@ -274,6 +274,7 @@ def interpret_and_process(base64_stringdata):
                         print("Record added to DB.")
                         returnmsg = "2 Record stored in DB successfully."
                     else:  # update command used
+                        print("Record updated in DB.")
                         returnmsg = "2 Record updated in DB successfully."
                 else:
                     returnmsg = "1 Record storing unsuccessful."
