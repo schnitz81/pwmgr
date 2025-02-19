@@ -339,11 +339,11 @@ function add () {
 	fi
 	echo ; read -p "Extra field (may be blank): " extra
 	while true; do
-		echo ; read -s -p "Enter encryption password (or quit):" encryptionpw
+		echo ; read -s -p "Enter encryption password (or quit): " encryptionpw
 		if [ "$encryptionpw" == "q" ] || [ "$encryptionpw" == "Q" ] || [ "$encryptionpw" == "quit" ] || [ "$encryptionpw" == "QUIT" ] || [ "$encryptionpw" == "exit" ] || [ "$encryptionpw" == "EXIT" ]; then
 			echo ; exit 1
 		fi
-		echo ; read -s -p "Repeat encryption password (or quit):" encryptionpw2
+		echo ; read -s -p "Repeat encryption password (or quit): " encryptionpw2
 		if [ "$encryptionpw2" == "q" ] || [ "$encryptionpw2" == "Q" ] || [ "$encryptionpw2" == "quit" ] || [ "$encryptionpw2" == "QUIT" ] || [ "$encryptionpw2" == "exit" ] || [ "$encryptionpw2" == "EXIT" ]; then
 			echo ; exit 1
 		fi
@@ -452,10 +452,10 @@ function get () {
 			fi
 
 			echo -e "\nDecrypting..."
-			title=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2)
+			title=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2 | base64 -d | base64 -d)
 			echo -e "\ntitle: $title"
 
-			# multithreading for "get" command decryption ######
+			# multithreading for "get" command decryption ####################################
 			(  # extra process
 				(  # pw process
 					(  # username process
@@ -643,11 +643,11 @@ function update () {
 	fi
 	echo ; read -p "Extra field (may be blank): " extra
 	while true; do
-		echo ; read -s -p "Enter encryption password (or quit):" encryptionpw
+		echo ; read -s -p "Enter encryption password (or quit): " encryptionpw
 		if [ "$encryptionpw" == "q" ] || [ "$encryptionpw" == "Q" ] || [ "$encryptionpw" == "quit" ] || [ "$encryptionpw" == "QUIT" ] || [ "$encryptionpw" == "exit" ] || [ "$encryptionpw" == "EXIT" ]; then
 			echo ; exit 1
 		fi
-		echo ; read -s -p "Repeat encryption password (or quit):" encryptionpw2
+		echo ; read -s -p "Repeat encryption password (or quit): " encryptionpw2
 		if [ "$encryptionpw2" == "q" ] || [ "$encryptionpw2" == "Q" ] || [ "$encryptionpw2" == "quit" ] || [ "$encryptionpw2" == "QUIT" ] || [ "$encryptionpw2" == "exit" ] || [ "$encryptionpw2" == "EXIT" ]; then
 			echo ; exit 1
 		fi

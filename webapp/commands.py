@@ -1,6 +1,7 @@
 import subprocess
 import pexpect
 from flask import flash
+import re
 
 
 def test():
@@ -66,7 +67,7 @@ def get(title, encryptionpw):
     # initialize return values
     fetched_title = username = pw = extra = ""
     try:
-        child = pexpect.spawn(f'pwmgr get {title} --nomask', timeout=50, maxread=1, encoding='utf-8')
+        child = pexpect.spawn(f'pwmgr get "{title}" --nomask', timeout=50, maxread=1, encoding='utf-8')
         respondalts = child.expect([r':\s*$', pexpect.TIMEOUT])
         if respondalts == 0:
             child.sendline(f'{encryptionpw}')
@@ -74,6 +75,7 @@ def get(title, encryptionpw):
 
         child.read_nonblocking()
         output = child.read().split('\n')
+        print(output)
 
         print(f'get: data received from client, sorting fields...')
         for line in output:
@@ -88,15 +90,16 @@ def get(title, encryptionpw):
             elif 'Specify exact title' in line:
                 log('Partly matched titles found. Use search to list.')
             elif 'title:' in line:
-                fetched_title = line.rsplit()[-1]
+                pattern = r'title:\s(.*?)\r'
+                fetched_title = re.search(pattern, line).group(1).strip()
             elif 'username:' in line:
-                username = line.rsplit()[-1]
+                pattern = r'username:\s(.*?)\r'
+                username = re.search(pattern, line).group(1).strip()
             elif 'password (hidden):' in line or 'password:' in line:
                 pw = line.rsplit()[-1]
             elif 'extra info:' in line:
-                extra = line.rsplit()[-1]
-                if extra == 'info:':
-                    extra = ''
+                pattern = r'extra\sinfo:\s(.*?)\r'
+                extra = re.search(pattern, line).group(1).strip()
 
         # title output crop fix
         if fetched_title == '' and 'username:' in output[1]:

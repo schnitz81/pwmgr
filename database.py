@@ -1,3 +1,5 @@
+import base64
+
 import config
 import sqlite3
 from io import StringIO
@@ -156,7 +158,7 @@ def list_partial_title_records(conn, title):
     with conn:
         c.execute(f'''SELECT title FROM records WHERE title LIKE '%{title}%' COLLATE NOCASE;''')
         db_values = c.fetchall()
-        strlist = ' '.join(map(','.join, db_values))
+        strlist = ' | '.join(map(','.join, db_values))
         comms.log(strlist)
         return strlist
 
@@ -166,7 +168,7 @@ def list_all_title_records(conn, title):
     with conn:
         c.execute(f'''SELECT title FROM records;''')
         db_values = c.fetchall()
-        strlist = ' '.join(map(','.join, db_values))
+        strlist = ' | '.join(map(','.join, db_values))
         comms.log(strlist)
         return strlist
 
@@ -174,8 +176,12 @@ def list_all_title_records(conn, title):
 def get_record(conn, title):
     c = conn.cursor()
     with conn:
-        c.execute(f'''SELECT * FROM records WHERE title='{title}' COLLATE NOCASE;''')
-        strlist = ' '.join(c.fetchone())
+        # fetch exact case spelling of title and base64 encode it separately to handle potential spaces
+        c.execute(f'''SELECT title FROM records WHERE title='{title}' COLLATE NOCASE;''')
+        db_title = ' '.join(c.fetchone())
+        b64_db_title = base64.b64encode(base64.b64encode(db_title.encode('utf-8')))
+        c.execute(f'''SELECT username, pw, extra, verification FROM records WHERE title='{title}' COLLATE NOCASE;''')
+        strlist = b64_db_title.decode('utf-8') + ' ' + ' '.join(c.fetchone())
         comms.log(strlist)
         return strlist
 
