@@ -771,8 +771,8 @@ COMMANDS:
 	- username
 	- password
 	- Extra field (optional/may be blank)
-	Encryption password selection is prompted. The encryption of the record will
-	be as strong as this password.
+	Encryption password selection is prompted. The encryption of the individual
+	record will be as strong as this password.
 
 - get / decrypt / dec / fetch / show / load [(title)]
 	Fetch a stored record to view. Same encryption password as when the record
@@ -795,10 +795,10 @@ COMMANDS:
 	must be used instead.
 
 - backup / dump
-	Use current session to the associated encrypted .encdb DB file and dump it to
-	an unencrypted .db file. For backup or debugging purposes. The [user].db format
-	file will automatically be imported and converted to .encdb when running "init"
-	if no [user].encdb file is found in the db_path.
+	Dump the .encdb DB file of the current session to an unencrypted .db file.
+	For backup or debugging purpose. The [user].db file will automatically be
+	imported and converted to .encdb when running "init" if no [user].encdb file
+	is found in the db_path.
 END
 }
 

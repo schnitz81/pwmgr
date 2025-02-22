@@ -11,6 +11,8 @@ The server part listens to connections from a client and verifies the access wit
 - Run the application: 
 - ```python3 -u main.py```
 
+### Docker / Podman
+
 There is a Docker image available:
 https://hub.docker.com/r/schnitz81/pwmgr-server
 
@@ -37,7 +39,11 @@ Init must be run first to create a session before the other commands can be used
 
 - init / config<br>
   Create a session. This creates a local session config and attempts to create a remote server db session. If the username db already exists, it's reused. Previous session password must match.<br>
-  By entering the same sessionuser/sessionpassword  multiple clients can be used with the same server DB.<br><br>
+  By entering the same sessionuser/sessionpassword  multiple clients can be used with the same server DB.<br>
+  If a [user].encdb is missing in the db_path, importing an unencrypted [user].db file will be attempted instead.<br>
+  Optional:<br>
+  --nonew  : Expect an already existing user DB in the server. Exit without
+  action if it's not found.<br><br>
 - init-change / config-change / configchange<br>
   Change credentials of an existing session. Old credentials must be given for verification.<br><br>
 - status / check / connection / test<br>
@@ -50,16 +56,26 @@ Init must be run first to create a session before the other commands can be used
   - password
   - Extra field (optional/may be blank)
 
-  Encryption password selection is prompted. The encryption of the record will be as strong as this password.<br><br> 
+  Encryption password selection is prompted. The encryption of the individual record will be as strong as this password.<br><br>
 - get / decrypt / dec / fetch / show / load [(title)]<br>
-  Fetch a stored record to view. Same encryption password as when the record was stored must be entered.<br><br>  
+  Fetch a stored record to view. Same encryption password as when the record was stored must be entered.<br>
+  Optional:<br>
+  -c / --copy  : Attempt to automatically copy password to the X clipboard
+  using xclip.<br>
+  --nomask  : Don't mask the password in the output.<br><br>
+
 - list / search [(title)]/[all]<br>
   Search for a record with partial name.<br><br>
 - delete / remove / del [(title)]<br>
   Delete a record.<br><br>
 - update / change / edit<br>
   Change a record, e.g. change the password stored.<br>
-  If the name of the record already exists, it's not possible to use "add" to overwrite, but this command must be used instead. 
+  If the name of the record already exists, it's not possible to use "add" to overwrite, but this command must be used instead.<br><br>
+- backup / dump<br>
+  Dump the .encdb DB file of the current session to an unencrypted .db file.
+  For backup or debugging purpose. The [user].db file will automatically be
+  imported and converted to .encdb when running "init" if no [user].encdb file
+  is found in the db_path.
 
 ### Environment variables
 
