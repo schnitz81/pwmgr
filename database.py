@@ -38,7 +38,6 @@ def create_connection(sessionuser, sessionpw):
             unenc_db_conn.backup(conn)
             conn.commit()
             unenc_db_conn.close()
-            write_inmem_db_to_file(conn, sessionuser, sessionpw)
         except Exception as read_unencrypted_db_to_mem_e:
             print(read_unencrypted_db_to_mem_e)
             conn.close()

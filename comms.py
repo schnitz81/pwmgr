@@ -6,13 +6,13 @@ import zlib
 import bruteforcecheck
 import os
 
-from config import verbose_output
 
 FAILSTRINGS = [
     "password is wrong",
+    "wrong password",
     "credentials wrong",
     "credentials don't match",
-    "DB doesn't exist"
+    "doesn't exist"
 ]
 
 
@@ -70,9 +70,10 @@ def tcp_listen_and_reply():
         returnmsg = process.interpret_and_process(data)
 
         # add to failed login list if credentials are wrong
-        for i in range(len(FAILSTRINGS)):
-            if FAILSTRINGS[i] in returnmsg:
-                bruteforcecheck.failed_auth(addr[0])
+        if returnmsg[0] == '1':  # if an error will be returned
+            for i in range(len(FAILSTRINGS)):
+                if FAILSTRINGS[i] in returnmsg:  # check if error is caused by unauthorized behaviour
+                    bruteforcecheck.failed_auth(addr[0])
     log(returnmsg)
 
     try:
