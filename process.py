@@ -91,21 +91,27 @@ def interpret_and_process(base64_stringdata):
             if database.credentials_match(conn, sessionuser, sessionpw):
                 print("Init matched existing credentials in DB.")
                 returnmsg = f"2 Credentials match previous record in DB. Reusing server DB for '{sessionuser}'."
+                credentials_ok = True
             # received credentials don't match
             else:
                 returnmsg = f"1 User DB for '{sessionuser}' exists in server but provided password is wrong."
+                credentials_ok = False
 
         # credentials don't exist since before
         else:
-            credentials_stored = database.store_credentials(conn, sessionuser, sessionpw)
+            if database.store_credentials(conn, sessionuser, sessionpw):
+                print("Stored new credentials.")
+                returnmsg = f"2 No previous credentials for user '{sessionuser}' in DB. Saving."
+                credentials_ok = True
+            else:
+                returnmsg = "1 Credentials storing unsuccessful."
+                credentials_ok = False
+
+        if credentials_ok:
             db_written = database.write_inmem_db_to_file(conn, sessionuser, sessionpw)  # write encrypted db file
             if not db_written:
                 returnmsg = f"1 Unable to write server DB to disk ({config.db_path}/{sessionuser}.encdb)."
-            elif credentials_stored:
-                print("Stored new credentials.")
-                returnmsg = f"2 No previous credentials for user '{sessionuser}' in DB. Saving."
-            else:
-                returnmsg = "1 Credentials storing unsuccessful."
+
         database.close_connection(conn)
         return returnmsg
 
