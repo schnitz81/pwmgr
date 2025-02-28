@@ -29,6 +29,7 @@ def create_websession():
     global websession_userid
     if 'websession_userid' not in session:
         log('New session connected. Generating new session and resetting.')
+        session.clear()  # only allow one session
         websession_userid = session['websession_userid'] = str(uuid.uuid4())
         reset_vars()
 
