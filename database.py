@@ -1,5 +1,4 @@
 import base64
-
 import config
 import sqlite3
 from io import StringIO

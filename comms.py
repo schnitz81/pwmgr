@@ -10,6 +10,7 @@ import os
 FAILSTRINGS = [
     "password is wrong",
     "wrong password",
+    "wrong session password",
     "credentials wrong",
     "credentials don't match",
     "doesn't exist"

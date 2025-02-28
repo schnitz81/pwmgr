@@ -83,8 +83,8 @@ def get(title, encryptionpw):
                 log(line)
             elif 'name can\'t be blank' in line:
                 log('Name seems to be blank')
-            elif 'Wrong encryption/decryption password' in line:
-                log('Wrong encryption/decryption password')
+            elif 'Wrong encryption password' in line:
+                log('Wrong encryption password')
             elif 'No matching record found' in line:
                 log('No matching record found.')
             elif 'Specify exact title' in line:
