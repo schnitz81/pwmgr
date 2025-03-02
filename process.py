@@ -82,7 +82,7 @@ def interpret_and_process(base64_stringdata):
 
         # verify connection
         if not connected_to_db(conn):
-            returnmsg = f"1 Unable to decrypt and connect to existing server DB ({config.db_path}/{sessionuser}.encdb). Possibly wrong password."
+            returnmsg = f"1 Unable to decrypt and connect to existing server DB ({config.db_path}/{sessionuser}.encdb). Possibly wrong session password."
             return returnmsg
 
         # check if credentials exist
@@ -143,10 +143,10 @@ def interpret_and_process(base64_stringdata):
 
         # verify connection and session credentials
         if not connected_to_db(conn):
-            returnmsg = f"1 Unable to decrypt and connect to existing DB ({config.db_path}/{sessionuser}.encdb). Possibly wrong password. Current session user and password must be verified to change them."
+            returnmsg = f"1 Unable to decrypt and connect to existing DB ({config.db_path}/{sessionuser}.encdb). Possibly wrong session password. Current session user and password must be verified to change them."
             return returnmsg
         elif not database.credentials_match(conn, sessionuser, sessionpw):
-            returnmsg = "1 Entered session credentials don't match DB records. Current session user and password must be verified to change them."
+            returnmsg = "1 Entered session credentials don't match DB records. Current user and session password must be verified to change them."
             database.close_connection(conn)
             return returnmsg
         else:
@@ -198,7 +198,7 @@ def interpret_and_process(base64_stringdata):
 
         # verify connection and session credentials
         if not connected_to_db(conn):
-            returnmsg = f"1 Unable to decrypt and connect to existing server DB ({config.db_path}/{sessionuser}.encdb). Possibly wrong password."
+            returnmsg = f"1 Unable to decrypt and connect to existing server DB ({config.db_path}/{sessionuser}.encdb). Possibly wrong session password."
             return returnmsg
         elif not database.credentials_match(conn, sessionuser, sessionpw):
             returnmsg = f"1 Session credentials don't match server DB file ({config.db_path}/{sessionuser}.encdb)."
@@ -236,7 +236,7 @@ def interpret_and_process(base64_stringdata):
 
         # verify connection and session credentials
         if not connected_to_db(conn):
-            returnmsg = "1 Unable to decrypt and connect to existing DB. Possibly wrong password."
+            returnmsg = "1 Unable to decrypt and connect to existing DB. Possibly wrong session password."
             return returnmsg
         elif not database.credentials_match(conn, sessionuser, sessionpw):
             returnmsg = "1 Session credentials don't match DB."
@@ -311,7 +311,7 @@ def interpret_and_process(base64_stringdata):
 
         # verify connection and session credentials
         if not connected_to_db(conn):
-            returnmsg = "1 Unable to decrypt and connect to existing DB. Possibly wrong password."
+            returnmsg = "1 Unable to decrypt and connect to existing DB. Possibly wrong session password."
             return returnmsg
         elif not database.credentials_match(conn, sessionuser, sessionpw):
             returnmsg = "1 Session credentials don't match DB."
@@ -364,7 +364,7 @@ def interpret_and_process(base64_stringdata):
 
         # verify connection and session credentials
         if not connected_to_db(conn):
-            returnmsg = "1 Unable to decrypt and connect to existing DB. Possibly wrong password."
+            returnmsg = "1 Unable to decrypt and connect to existing DB. Possibly wrong session password."
             return returnmsg
         elif not database.credentials_match(conn, sessionuser, sessionpw):
             returnmsg = "1 Session credentials don't match DB."
@@ -419,7 +419,7 @@ def interpret_and_process(base64_stringdata):
 
         # verify connection and session credentials
         if not connected_to_db(conn):
-            returnmsg = "1 Unable to decrypt and connect to existing DB. Possibly wrong password."
+            returnmsg = "1 Unable to decrypt and connect to existing DB. Possibly wrong session password."
             return returnmsg
         elif not database.credentials_match(conn, sessionuser, sessionpw):
             returnmsg = "1 Session credentials don't match DB."
@@ -479,7 +479,7 @@ def interpret_and_process(base64_stringdata):
 
         # verify connection and session credentials
         if not connected_to_db(conn):
-            returnmsg = "1 Unable to decrypt and connect to existing DB. Possibly wrong password."
+            returnmsg = "1 Unable to decrypt and connect to existing DB. Possibly wrong session password."
             return returnmsg
         elif not database.credentials_match(conn, sessionuser, sessionpw):
             returnmsg = "1 Session credentials don't match DB."
