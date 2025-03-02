@@ -446,7 +446,7 @@ function get () {
 				echo -e "\nTesting password..."
 				verification=$(decrypt $(echo "$SERVERRESPONSE" | cut -d ' ' -f 6) "$encryptionpw")
 				if [ "$verification" != "verification" ]; then
-					echo -e "\nError: Wrong encryption/decryption password given. Unable to decrypt.\n"
+					echo -e "\nError: Wrong encryption password given. Unable to decrypt.\n"
 					exit 1
 				fi
 			fi
