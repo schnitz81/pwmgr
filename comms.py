@@ -5,6 +5,7 @@ import base64
 import zlib
 import bruteforcecheck
 import os
+import datetime
 
 
 FAILSTRINGS = [
@@ -53,7 +54,7 @@ def tcp_listen_and_reply():
     c, addr = s.accept()
 
     # display client address
-    print("------------------------------------")
+    print(datetime.datetime.now(), " -------------------------------------------")
     print("Connection from:", str(addr))
 
     # check IP ban
