@@ -13,7 +13,8 @@ FAILSTRINGS = [
     "wrong session password",
     "credentials wrong",
     "credentials don't match",
-    "doesn't exist"
+    "doesn't exist",
+    "Invalid base64"
 ]
 
 
