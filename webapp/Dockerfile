@@ -5,7 +5,7 @@ LABEL maintainer="schnitz81"
 LABEL description="This is webapp for pwmgr."
 LABEL url="https://github.com/schnitz81/pwmgr"
 
-RUN apk --no-cache update && apk add --no-cache xterm bash openssl netcat-openbsd ncurses  \
+RUN apk --no-cache update && apk add --no-cache xterm bash openssl netcat-openbsd ncurses tzdata  \
     && wget -O /usr/local/bin/pwmgr https://raw.githubusercontent.com/schnitz81/pwmgr/main/client/pwmgr.sh  \
     && chmod +x /usr/local/bin/pwmgr  \
     && mkdir /pwmgr-webapp
@@ -26,4 +26,4 @@ ENTRYPOINT ["python","-u","main.py"]
 # docker build . -t pwmgr-webapp
 
 # run:
-# docker run -d -p 8888:8888 --name pwmgr-webapp pwmgr-webapp
+# docker run -d -p 8888:8888 -v /etc/localtime:/etc/localtime:ro --name pwmgr-webapp pwmgr-webapp
