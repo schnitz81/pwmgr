@@ -48,15 +48,15 @@ def init(server, sessionuser, sessionpw, new):
             elif 'Error:' in line:
                 log(line)
                 return False
-            elif 'No previous credentials' in line:
+            elif 'DB aligned successfully' in line:
                 log('Session user not found. Created new user with entered session credentials.')
         if child.isalive():
             child.close()
         # Print the final state of the child. Normally isalive() should be FALSE.
         if child.isalive():
-            print('Subprocess did not exit gracefully.')
+            print('Child did not exit gracefully.')
         else:
-            print('Subprocess exited gracefully.')
+            print('Child exited gracefully.')
         return True
 
     except Exception as init_e:
@@ -75,6 +75,7 @@ def get(title, encryptionpw):
 
         child.read_nonblocking()
         output = child.read().split('\n')
+        print(output)
 
         print(f'get: data received from client, sorting fields...')
         for line in output:
@@ -112,9 +113,9 @@ def get(title, encryptionpw):
             child.close()
         # Print the final state of the child. Normally isalive() should be FALSE.
         if child.isalive():
-            print('Subprocess did not exit gracefully.')
+            print('Child did not exit gracefully.')
         else:
-            print('Subprocess exited gracefully.')
+            print('Child exited gracefully.')
 
     except Exception as get_e:
         print(get_e)
@@ -159,9 +160,9 @@ def search(title):
             child.close()
         # Print the final state of the child. Normally isalive() should be FALSE.
         if child.isalive():
-            print('Subprocess did not exit gracefully.')
+            print('Child did not exit gracefully.')
         else:
-            print('Subprocess exited gracefully.')
+            print('Child exited gracefully.')
 
     except Exception as search_e:
         print(search_e)
@@ -211,9 +212,9 @@ def add(title, username, pw, extra, encryptionpw, overwrite):
             child.close()
         # Print the final state of the child. Normally isalive() should be FALSE.
         if child.isalive():
-            print('Subprocess did not exit gracefully.')
+            print('Child did not exit gracefully.')
         else:
-            print('Subprocess exited gracefully.')
+            print('Child exited gracefully.')
         return success
 
     except Exception as add_e:
@@ -252,9 +253,9 @@ def update(title, username, pw, extra, encryptionpw):
             child.close()
         # Print the final state of the child. Normally isalive() should be FALSE.
         if child.isalive():
-            print('Subprocess did not exit gracefully.')
+            print('Child did not exit gracefully.')
         else:
-            print('Subprocess exited gracefully.')
+            print('Child exited gracefully.')
         return success
 
     except Exception as update_e:
@@ -280,9 +281,9 @@ def delete(title):
             child.close()
         # Print the final state of the child. Normally isalive() should be FALSE.
         if child.isalive():
-            print('Subprocess did not exit gracefully.')
+            print('Child did not exit gracefully.')
         else:
-            print('Subprocess exited gracefully.')
+            print('Child exited gracefully.')
         return deleted
 
     except Exception as delete_e:

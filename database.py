@@ -3,8 +3,17 @@ import config
 import sqlite3
 from io import StringIO
 import file
-import hashlib
 import comms
+import hashlib
+
+
+def connected_to_db(conn):
+    # check uf DB connection is active
+    try:
+        conn.cursor()
+        return True
+    except Exception as conn_e:
+        return False
 
 
 def create_connection(sessionuser, sessionpw):
@@ -58,6 +67,13 @@ def create_tables(conn):
         )
         c.execute(
             '''
+               CREATE TABLE IF NOT EXISTS transporttokens (
+               id INTEGER PRIMARY KEY AUTOINCREMENT,
+               token TEXT NOT NULL
+           );'''
+        )
+        c.execute(
+            '''
                CREATE TABLE IF NOT EXISTS records (
                title TEXT PRIMARY KEY,
                username TEXT,
@@ -98,6 +114,18 @@ def credentials_match(conn, sessionuser, sessionpw):
             return False
 
 
+def transporttoken_match(conn, tokensha256):
+    c = conn.cursor()
+    with conn:
+        c.execute(f'''SELECT token FROM transporttokens;''')
+        db_values = c.fetchall()
+        strlist = ' | '.join(map(','.join, db_values))
+        for token in strlist:
+            if hashlib.sha3_512(token.encode()).hexdigest() == tokensha256:
+                return True
+        return False
+
+
 def store_credentials(conn, sessionuser, sessionpw):
     c = conn.cursor()
     try:
@@ -112,14 +140,35 @@ def store_credentials(conn, sessionuser, sessionpw):
         return False
 
 
+def store_transporttoken(conn, token):
+    c = conn.cursor()
+    with conn:
+        try:
+            c.execute(f'''INSERT INTO transporttokens (token) VALUES ('{token}');''')
+            return True
+        except Exception as storetoken_e:
+            print(storetoken_e)
+            return False
+
+
+def get_all_transporttokens(conn):
+    c = conn.cursor()
+    with conn:
+        c.execute(f'''SELECT token FROM transporttokens;''')
+        db_values = c.fetchall()
+        comms.log(db_values)
+        return db_values
+
+
 def store_record(conn, title, username, pw, extra, verification):
     c = conn.cursor()
-    try:
-        c.execute(f'''REPLACE INTO records (title, username, pw, extra, verification) VALUES ('{title}', '{username}', '{pw}', '{extra}', '{verification}');''')
-        return True
-    except Exception as store_e:
-        print(f'DB storage error: {store_e}')
-        return False
+    with conn:
+        try:
+            c.execute(f'''REPLACE INTO records (title, username, pw, extra, verification) VALUES ('{title}', '{username}', '{pw}', '{extra}', '{verification}');''')
+            return True
+        except Exception as store_e:
+            print(f'DB storage error: {store_e}')
+            return False
 
 
 def exact_title_exists(conn, title):
@@ -161,7 +210,7 @@ def list_partial_title_records(conn, title):
         return strlist
 
 
-def list_all_title_records(conn, title):
+def list_all_title_records(conn):
     c = conn.cursor()
     with conn:
         c.execute(f'''SELECT title FROM records;''')
@@ -204,6 +253,7 @@ def write_inmem_db_to_file(conn, sessionuser, sessionpw):
         memfile.seek(0)
         db_encryption_rtn_code = file.encrypt_and_write_file(memfile.read(), f'{config.db_path}/{sessionuser}.encdb', sessionpw)
         if db_encryption_rtn_code == 0:
+            comms.log("Inmem DB written to file.")
             return True
         else:
             return False
@@ -223,11 +273,11 @@ def write_inmem_db_to_file_unencrypted(conn, sessionuser):
     except Exception as read_unencrypted_db_to_mem_e:
         print(read_unencrypted_db_to_mem_e)
         conn.close()
+        comms.log(f"Error: Unsuccessful inmem DB to file dump. Unable to write {config.db_path}/{sessionuser}.db")
         return False
 
 
 def close_connection(conn):
     conn.commit()
-    print("Disconnecting from db.")
+    print("Disconnecting from DB.")
     conn.close()
-
