@@ -301,7 +301,7 @@ function sessioncheck () {
 	if ! [ -f "$SESSIONPATH" ]; then
 		echo -e "No local session found. Please run with init parameter to create one.\n"
 		exit 1
-	elif [[ $(cat $SESSIONPATH | wc -l) -lt 3 ]]; then
+	elif [[ $(cat $SESSIONPATH | wc -l) -lt 4 ]]; then
 		echo -e "Local session exists but is invalid.\n"
 		exit 1
 	fi

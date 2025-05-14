@@ -39,16 +39,16 @@ def init(server, sessionuser, sessionpw, new):
         output = child.read().split('\n')
         print(f'init: {output}')
         for line in output:
-            if 'nonew selected' in line:
+            if 'nonew selected'.casefold() in line.casefold():
                 log('Entered user not found. Check username or create a new user by adding a new record.')
                 return False
-            elif 'Server error' in line:
+            elif 'Server error'.casefold() in line.casefold():
                 log(line)
                 return False
-            elif 'Error:' in line:
+            elif 'Error:'.casefold() in line.casefold():
                 log(line)
                 return False
-            elif 'aligned successfully' in line:
+            elif 'aligned successfully'.casefold() in line.casefold():
                 log('Handshake success.')
         if child.isalive():
             child.close()
@@ -78,25 +78,25 @@ def get(title, encryptionpw):
 
         print(f'get: data received from client, sorting fields...')
         for line in output:
-            if 'Server error' in line:
+            if 'Server error'.casefold() in line.casefold():
                 log(line)
-            elif 'name can\'t be blank' in line:
+            elif 'name can\'t be blank'.casefold() in line.casefold():
                 log('Name seems to be blank')
-            elif 'Wrong encryption password' in line:
+            elif 'Wrong encryption password'.casefold() in line.casefold():
                 log('Wrong encryption password')
-            elif 'No matching record found' in line:
+            elif 'No matching record found'.casefold() in line.casefold():
                 log('No matching record found.')
-            elif 'Specify exact title' in line:
+            elif 'Specify exact title'.casefold() in line.casefold():
                 log('Partly matched titles found. Use search to list.')
-            elif 'title:' in line:
+            elif 'title:'.casefold() in line.casefold():
                 pattern = r'title:\s(.*?)\r'
                 fetched_title = re.search(pattern, line).group(1).strip()
-            elif 'username:' in line:
+            elif 'username:'.casefold() in line.casefold():
                 pattern = r'username:\s(.*?)\r'
                 username = re.search(pattern, line).group(1).strip()
-            elif 'password (hidden):' in line or 'password:' in line:
+            elif 'password (hidden):'.casefold() in line.casefold() or 'password:'.casefold() in line.casefold():
                 pw = line.rsplit()[-1]
-            elif 'extra info:' in line:
+            elif 'extra info:'.casefold() in line.casefold():
                 pattern = r'extra\sinfo:\s(.*?)\r'
                 extra = re.search(pattern, line).group(1).strip()
 
@@ -148,9 +148,9 @@ def search(title):
         output = child.read().split('\n')
         print(f'search: {output}')
         for line in output:
-            if 'Server error' in line:
+            if 'Server error'.casefold() in line.casefold():
                 log(line)
-            elif 'Records found' in line:
+            elif 'Records found'.casefold() in line.casefold():
                 found_records = True
             if found_records:
                 log(line)
@@ -193,7 +193,7 @@ def add(title, username, pw, extra, encryptionpw, overwrite):
         output = child.read().split('\n')
         print(f'add: {output}')
         for line in output:
-            if 'already exists' in line:
+            if 'already exists'.casefold() in line.casefold():
                 log('Title already exists in DB.')
                 if overwrite:
                     log('Overwrite selected. Proceeding to update existing record.')
@@ -201,10 +201,10 @@ def add(title, username, pw, extra, encryptionpw, overwrite):
                     break
                 else:
                     log('Choose overwrite to update existing record.')
-            elif 'error'.casefold() in line:
+            elif 'error'.casefold() in line.casefold():
                 log(line)
                 success = False
-            elif 'successfully' in line:
+            elif 'successfully'.casefold() in line.casefold():
                 success = True
 
         if child.isalive():
@@ -242,10 +242,10 @@ def update(title, username, pw, extra, encryptionpw):
         output = child.read().split('\n')
         print(f'update: {output}')
         for line in output:
-            if 'error'.casefold() in line:
+            if 'error'.casefold() in line.casefold():
                 log(line)
                 success = False
-            elif 'successfully' in line:
+            elif 'successfully'.casefold() in line.casefold():
                 success = True
 
         if child.isalive():
@@ -271,9 +271,9 @@ def delete(title):
         output = child.read().split('\n')
         print(f'delete: {output}')
         for line in output:
-            if 'Server error' in line:
+            if 'Server error'.casefold() in line.casefold():
                 log(line)
-            elif 'deleted' in line:
+            elif 'deleted'.casefold() in line.casefold():
                 deleted = True
 
         if child.isalive():
