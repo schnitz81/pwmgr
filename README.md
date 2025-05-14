@@ -97,8 +97,23 @@ Since it only interacts with the terminal based client, it only needs the client
 
 ### Requirements
 
-- The Python3 dependencies are listed in the requirements file.
-- The pwmgr client executable needs to be present in one of the PATH locations (and named "pwmgr"), with the dependencies listed above.
+#### Server
+- Only built-in Python modules are used by the server application.
+- openssl
+- base64
+
+#### Webapp
+- The webapp Python3 dependencies are listed in the requirements file in the webapp subfolder.
+
+#### Client
+- BSD version of netcat (package commonly named `netcat-openbsd`)
+- openssl (available in most base installations)
+- base64 (available in most base installations)
+- gzip (available in most base installations)
+
+<b>Client optional:</b>
+- keyctl from `keyutils` package (for remembering last used encryption password for a limited time)
+- xclip (for autosaving password to clipboard)
 
 ### Usage
 
