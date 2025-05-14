@@ -1,8 +1,7 @@
 import socket
 import config
 import process
-import base64
-import zlib
+import datacrunch
 import bruteforcecheck
 import os
 import datetime
@@ -15,7 +14,8 @@ FAILSTRINGS = [
     "credentials wrong",
     "credentials don't match",
     "doesn't exist",
-    "Invalid base64"
+    "invalid base64",
+    "no matching transport encryption token"
 ]
 
 
@@ -75,21 +75,15 @@ def tcp_listen_and_reply():
         # add to failed login list if credentials are wrong
         if returnmsg[0] == '1':  # if an error will be returned
             for i in range(len(FAILSTRINGS)):
-                if FAILSTRINGS[i] in returnmsg:  # check if error is caused by unauthorized behaviour
+                if FAILSTRINGS[i].casefold() in returnmsg.casefold():  # check if error is caused by unauthorized behaviour
                     bruteforcecheck.failed_auth(addr[0])
-    log(returnmsg)
+    log(f"returnmsg to parse: {returnmsg}")
+
+    # encode response
+    returnmsg = datacrunch.scramble(returnmsg)
 
     try:
-        # encode response
-        returnmsg = base64.b64encode(process.b64swap(base64.b64encode(zlib.compress(returnmsg.encode("utf-8"), 1, wbits=zlib.MAX_WBITS | 16))))
-    except Exception as returnmsg_e:
-        print(returnmsg_e)
-        returnmsg = f"1 {returnmsg_e}"
-        returnmsg = base64.b64encode(process.b64swap(base64.b64encode(zlib.compress(returnmsg.encode("utf-8"), 1, wbits=zlib.MAX_WBITS | 16))))
-    log(f"Parsed returnmsg: {returnmsg}")
-
-    try:
-        c.send(returnmsg)
+        c.send(returnmsg.encode('utf-8'))
         print("Responded.")
     except Exception as send_e:
         print("Response send error:")

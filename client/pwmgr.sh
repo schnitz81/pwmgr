@@ -97,9 +97,26 @@ function encrypt() {
 
 
 function decrypt() {
+	if [ -z "$2" ]; then
+		echo "Client error: decryption function didn't receive 2 parameters. Missing verification var?"
+	fi
 	local encrypted_data="$1"
 	local encryptionpw="$2"
-	echo "$encrypted_data" | openssl enc -chacha20 -md sha3-512 -a -d -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw" | tr -d "\0"
+	echo "$encrypted_data" | base64 -d | openssl enc -chacha20 -md sha3-512 -d -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw" | tr -d "\0"
+}
+
+
+function transport_encrypt(){
+	local unencrypted_data="$1"
+	local encryptionpw=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
+	echo "$unencrypted_data" | openssl aes-256-cbc -md sha3-512 -a -pbkdf2 -k "$encryptionpw" | tr -d "\n"
+}
+
+
+function transport_decrypt(){
+	local encrypted_data="$1"
+	local encryptionpw=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
+	echo "$encrypted_data" | base64 -d | openssl aes-256-cbc -md sha3-512 -d -pbkdf2 -k "$encryptionpw" | tr -d "\0"
 }
 
 
@@ -163,16 +180,23 @@ function init () {
 			echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
 			echo
 			;;
-		2)
-			echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
+		2|3)
+			transporttoken=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
+			echo -n "$transporttoken" | base64 -w0 | base64 -w0 >> "$SESSIONPATH.tmp"
+			add_newline_if_missing "$SESSIONPATH.tmp"
 			# activate local session
 			mv "$SESSIONPATH.tmp" "$SESSIONPATH"
 			if [ $? != 0 ]; then
 				echo -e "Error: Local session activation unsuccessful.\n"
 				exit 1
+			else
+				if [ "$(echo "$SERVERRESPONSE" | cut -d ' ' -f 1)" == "2" ]; then
+					echo -n "Previous user DB missing, new DB created. "
+				else
+					echo -n "Using existing user DB. "
+				fi
+				echo "Local session and remote server DB aligned successfully."
 			fi
-			echo "Success: Local session and remote server DB aligned successfully."
-			echo
 			;;
 		*)
 			echo "Unknown error:"
@@ -251,15 +275,18 @@ function init-change () {
 			echo
 			;;
 		2)
-			echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
+			transporttoken=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
+			echo -n "$transporttoken" | base64 -w0 | base64 -w0 >> "$SESSIONPATH.tmp"
+			add_newline_if_missing "$SESSIONPATH.tmp"
+			# activate local session
 			echo "Updating local session."
 			mv "$SESSIONPATH.tmp" "$SESSIONPATH"
 			if [ $? != 0 ]; then
 				echo -e "Error: Local session replacement unsuccessful.\n"
 				exit 1
+			else
+				echo "Local session and remote server DB aligned successfully."
 			fi
-			echo "Local session and remote server DB aligned successfully."
-			echo
 			;;
 		*)
 			echo "Unknown error:"
@@ -288,9 +315,10 @@ function status () {
 	command="status"
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
+	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
 
 	echo -e "\nChecking status..."
-	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" | gzip -1f | base64 -w0)
+	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${tokenmd5}" | gzip -1f | base64 -w0)
 	swapped_b64=$(b64swap "$unswapped_b64")
 	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	response_valid $? $SERVERRESPONSE
@@ -303,7 +331,11 @@ function status () {
 			;;
 		2)
 			echo -e "\nServer response OK:"
-			echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
+			# remove response code
+			encrypted_data=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
+			# decrypt transport encryption when response code is OK
+			decrypted_server_response=$(transport_decrypt "$encrypted_data")
+			echo "$decrypted_server_response"
 			echo
 			;;
 		*)
@@ -360,18 +392,19 @@ function add () {
 
 	# encrypt user and pw
 	echo -e "\nEncrypting..."
-	title=$(echo "$title" | base64 -w0 | base64 -w0)
-	username=$(encrypt "$username" "$encryptionpw")
-	pw=$(encrypt "$pw" "$encryptionpw")
-	extra=$(encrypt "$extra" "$encryptionpw")
-	verification=$(encrypt "verification" "$encryptionpw")
+	title=$(transport_encrypt "$title")
+	username=$(transport_encrypt $(encrypt "$username" "$encryptionpw"))
+	pw=$(transport_encrypt $(encrypt "$pw" "$encryptionpw"))
+	extra=$(transport_encrypt $(encrypt "$extra" "$encryptionpw"))
+	verification=$(transport_encrypt $(encrypt "verification" "$encryptionpw"))
 
 	command="add"
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
+	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
 
 	echo -e "\nAdding record...\n"
-	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" "${username}" "${pw}" "${extra}" "${verification}" | gzip -1f | base64 -w0)
+	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${tokenmd5}" "${title}" "${username}" "${pw}" "${extra}" "${verification}" | gzip -1f | base64 -w0)
 	swapped_b64=$(b64swap "$unswapped_b64")
 	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	response_valid $? $SERVERRESPONSE
@@ -383,7 +416,11 @@ function add () {
 			echo
 			;;
 		2)
-			echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
+			# remove response code
+			encrypted_data=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
+			# decrypt transport encryption when response code is OK
+			decrypted_server_response=$(transport_decrypt "$encrypted_data")
+			echo "$decrypted_server_response"
 			echo "Remember your encryption password."
 			echo
 			;;
@@ -411,12 +448,13 @@ function get () {
 	fi
 
 	command="get"
-	title=$(echo "$title" | base64 -w0 | base64 -w0)
+	title=$(transport_encrypt "$title")
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
+	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
 
 	echo -e "\nFetching record..."
-	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" | gzip -1f | base64 -w0)
+	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${tokenmd5}" "${title}" | gzip -1f | base64 -w0)
 	swapped_b64=$(b64swap "$unswapped_b64")
 	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	response_valid $? $SERVERRESPONSE
@@ -428,11 +466,15 @@ function get () {
 			echo
 			;;
 		2)
+			# remove response code
+			encrypted_data=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
+			# decrypt transport encryption when response code is OK
+			decrypted_server_response=$(transport_decrypt "$encrypted_data")
 			# try key session if available
 			encryptionpw=$(get_key_from_key_session)
 			if [ -n "$encryptionpw" ]; then
 				echo -e "\nTesting key session password..."
-				verification=$(decrypt $(echo "$SERVERRESPONSE" | cut -d ' ' -f 6) "$encryptionpw")
+				verification=$(decrypt $(echo "$decrypted_server_response" | cut -d ' ' -f 5) "$encryptionpw")
 			fi
 
 			# no valid encpw from key session, enter manually
@@ -444,7 +486,7 @@ function get () {
 
 				# decrypt and verify verification string when entered manually
 				echo -e "\nTesting password..."
-				verification=$(decrypt $(echo "$SERVERRESPONSE" | cut -d ' ' -f 6) "$encryptionpw")
+				verification=$(decrypt $(echo "$decrypted_server_response" | cut -d ' ' -f 5) "$encryptionpw")
 				if [ "$verification" != "verification" ]; then
 					echo -e "\nError: Wrong encryption password given. Unable to decrypt.\n"
 					exit 1
@@ -452,19 +494,19 @@ function get () {
 			fi
 
 			echo -e "\nDecrypting..."
-			title=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2 | base64 -d | base64 -d)
+			title=$(echo "$decrypted_server_response" | cut -d ' ' -f 1 | base64 -d | base64 -d)
 			echo -e "\ntitle: $title"
 
 			# multithreading for "get" command decryption ####################################
 			(  # extra process
 				(  # pw process
 					(  # username process
-						username=$(decrypt $(echo "$SERVERRESPONSE" | cut -d ' ' -f 3) "$encryptionpw")
+						username=$(decrypt $(echo "$decrypted_server_response" | cut -d ' ' -f 2) "$encryptionpw")
 						echo "username: $username"
 					) &
 					pid_username=$!  # store PID of the username decryption and printout process
 
-					pw=$(decrypt $(echo "$SERVERRESPONSE" | cut -d ' ' -f 4) "$encryptionpw")
+					pw=$(decrypt $(echo "$decrypted_server_response" | cut -d ' ' -f 3) "$encryptionpw")
 					wait $pid_username  # wait for username to be printed before printing pw output
 					if (( $nomask )); then  # output password depending on nomask input parameter
 						echo "password: $pw"
@@ -495,7 +537,7 @@ function get () {
 				) &
 				pid_pw=$! # store PID of the pw decryption and printout process
 
-				extra=$(decrypt $(echo "$SERVERRESPONSE" | cut -d ' ' -f 5) "$encryptionpw")
+				extra=$(decrypt $(echo "$decrypted_server_response" | cut -d ' ' -f 4) "$encryptionpw")
 				wait $pid_pw  # wait for the pw printout before printing extra output
 				echo -e "extra info: $extra\n"
 			) &
@@ -503,8 +545,12 @@ function get () {
 			wait # wait for muliprocess chain to finish
 			;;
 		3)
+			# remove response code
+			encrypted_data=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
+			# decrypt transport encryption when response code is OK
+			decrypted_server_response=$(transport_decrypt "$encrypted_data")
 			echo -e "\nPartly matched records found:\n"
-			echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
+			echo "$decrypted_server_response"
 			echo -e "\nSpecify exact title."
 			echo
 			;;
@@ -533,12 +579,13 @@ function list () {
 	fi
 
 	command="list"
-	title=$(echo "$title" | base64 -w0 | base64 -w0)
+	title=$(transport_encrypt "$title")
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
+	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
 
 	echo -e "\nFetching records..."
-	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" | gzip -1f | base64 -w0)
+	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${tokenmd5}" "${title}" | gzip -1f | base64 -w0)
 	swapped_b64=$(b64swap "$unswapped_b64")
 	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	response_valid $? $SERVERRESPONSE
@@ -549,14 +596,13 @@ function list () {
 			echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
 			echo
 			;;
-		2)
+		2|3)
+			# remove response code
+			encrypted_data=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
+			# decrypt transport encryption when response code is OK
+			decrypted_server_response=$(transport_decrypt "$encrypted_data")
 			echo -e "\nRecords found:\n"
-			echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
-			echo
-			;;
-		3)
-			echo -e "\nRecords found:\n"
-			echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
+			echo "$decrypted_server_response"
 			echo
 			;;
 		*)
@@ -582,12 +628,13 @@ function delete () {
 	fi
 
 	command="delete"
-	title=$(echo "$title" | base64 -w0 | base64 -w0)
+	title=$(transport_encrypt "$title")
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
+	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
 
 	echo -e "\nDeleting record..."
-	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" | gzip -1f | base64 -w0)
+	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${tokenmd5}" "${title}" | gzip -1f | base64 -w0)
 	swapped_b64=$(b64swap "$unswapped_b64")
 	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	response_valid $? $SERVERRESPONSE
@@ -598,15 +645,19 @@ function delete () {
 			echo "Server error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
 			echo
 			;;
-		2)
-			echo -e "\nServer record deletion OK:"
-			echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
-			echo
-			;;
-		3)
-			echo -e "\nRecords found:\n"
-			echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
-			echo -e "\nSpecify exact record name."
+		2|3)
+			# remove response code
+			encrypted_data=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
+			# decrypt transport encryption when response code is OK
+			decrypted_server_response=$(transport_decrypt "$encrypted_data")
+			if [ "$(echo "$SERVERRESPONSE" | cut -d ' ' -f 1)" == "2" ]; then  # exact match deleted
+				echo -e "\nServer record deletion OK:"
+				echo "$decrypted_server_response"
+			else  # multiple matches, no deletion executed
+				echo -e "\nRecords found:\n"
+				echo "$decrypted_server_response"
+				echo -e "\nSpecify exact record name."
+			fi
 			echo
 			;;
 		*)
@@ -664,18 +715,19 @@ function update () {
 
 	# encrypt user and pw
 	echo -e "\nEncrypting..."
-	title=$(echo "$title" | base64 -w0 | base64 -w0)
-	username=$(encrypt "$username" "$encryptionpw")
-	pw=$(encrypt "$pw" "$encryptionpw")
-	extra=$(encrypt "$extra" "$encryptionpw")
-	verification=$(encrypt "verification" "$encryptionpw")
+	title=$(transport_encrypt "$title")
+	username=$(transport_encrypt $(encrypt "$username" "$encryptionpw"))
+	pw=$(transport_encrypt $(encrypt "$pw" "$encryptionpw"))
+	extra=$(transport_encrypt $(encrypt "$extra" "$encryptionpw"))
+	verification=$(transport_encrypt $(encrypt "verification" "$encryptionpw"))
 
 	command="update"
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
+	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
 
 	echo -e "\nUpdating record...\n"
-	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${title}" "${username}" "${pw}" "${extra}" "${verification}" | gzip -1f | base64 -w0)
+	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${tokenmd5}" "${title}" "${username}" "${pw}" "${extra}" "${verification}" | gzip -1f | base64 -w0)
 	swapped_b64=$(b64swap "$unswapped_b64")
 	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	response_valid $? $SERVERRESPONSE
@@ -687,8 +739,12 @@ function update () {
 			echo
 			;;
 		2)
-			echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
-			echo "Remember your new encryption password."
+			# remove response code
+			encrypted_data=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
+			# decrypt transport encryption when response code is OK
+			decrypted_server_response=$(transport_decrypt "$encrypted_data")
+			echo "$decrypted_server_response"
+			echo "Remember your encryption password."
 			echo
 			;;
 		*)
@@ -707,9 +763,10 @@ function backup () {
 	command="backup"
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
+	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
 
 	echo -e "\nChecking status..."
-	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" | gzip -1f | base64 -w0)
+	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${tokenmd5}" | gzip -1f | base64 -w0)
 	swapped_b64=$(b64swap "$unswapped_b64")
 	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	response_valid $? $SERVERRESPONSE
@@ -721,8 +778,12 @@ function backup () {
 			echo
 			;;
 		2)
+			# remove response code
+			encrypted_data=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
+			# decrypt transport encryption when response code is OK
+			decrypted_server_response=$(transport_decrypt "$encrypted_data")
 			echo -e "\nServer response OK:"
-			echo "$SERVERRESPONSE" | cut -d ' ' -f 2-
+			echo "$decrypted_server_response"
 			echo
 			;;
 		*)

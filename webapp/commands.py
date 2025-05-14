@@ -48,8 +48,8 @@ def init(server, sessionuser, sessionpw, new):
             elif 'Error:' in line:
                 log(line)
                 return False
-            elif 'No previous credentials' in line:
-                log('Session user not found. Created new user with entered session credentials.')
+            elif 'aligned successfully' in line:
+                log('Handshake success.')
         if child.isalive():
             child.close()
         # Print the final state of the child. Normally isalive() should be FALSE.
