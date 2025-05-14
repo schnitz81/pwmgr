@@ -3,7 +3,6 @@ import base64
 import zlib
 import string
 import secrets
-
 import comms
 import database
 import hashlib
@@ -87,7 +86,7 @@ def transport_decrypt(data, transporttoken):
     try:
         # decrypt data with generated encryptionpw
         openssl_output = subprocess.run(f'''
-                echo "{data}" | openssl aes-256-cbc -d -md sha3-512 -a -pbkdf2 -k "{transporttoken}"
+                echo "{data}" | base64 -d | openssl aes-256-cbc -d -md sha3-512 -pbkdf2 -k "{transporttoken}"
             ''',
             shell=True, check=True,
             executable='/bin/sh',

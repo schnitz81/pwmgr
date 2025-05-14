@@ -102,7 +102,7 @@ function decrypt() {
   fi
 	local encrypted_data="$1"
 	local encryptionpw="$2"
-	echo "$encrypted_data" | openssl enc -chacha20 -md sha3-512 -a -d -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw" | tr -d "\0"
+	echo "$encrypted_data" | base64 -d | openssl enc -chacha20 -md sha3-512 -d -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw" | tr -d "\0"
 }
 
 
@@ -116,7 +116,7 @@ function transport_encrypt(){
 function transport_decrypt(){
   local encrypted_data="$1"
   local encryptionpw=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
-  echo "$encrypted_data" | openssl aes-256-cbc -md sha3-512 -a -d -pbkdf2 -k "$encryptionpw" | tr -d "\0"
+  echo "$encrypted_data" | base64 -d | openssl aes-256-cbc -md sha3-512 -d -pbkdf2 -k "$encryptionpw" | tr -d "\0"
 }
 
 
