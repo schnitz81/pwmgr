@@ -97,9 +97,9 @@ function encrypt() {
 
 
 function decrypt() {
-  if [ -z "$2" ]; then
-    echo "Client error: decryption function didn't receive 2 parameters. Missing verification var?"
-  fi
+	if [ -z "$2" ]; then
+		echo "Client error: decryption function didn't receive 2 parameters. Missing verification var?"
+	fi
 	local encrypted_data="$1"
 	local encryptionpw="$2"
 	echo "$encrypted_data" | base64 -d | openssl enc -chacha20 -md sha3-512 -d -pbkdf2 -iter 577372 -salt -pass pass:"$encryptionpw" | tr -d "\0"
@@ -109,14 +109,14 @@ function decrypt() {
 function transport_encrypt(){
 	local unencrypted_data="$1"
 	local encryptionpw=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
-  echo "$unencrypted_data" | openssl aes-256-cbc -md sha3-512 -a -pbkdf2 -k "$encryptionpw" | tr -d "\n"
+	echo "$unencrypted_data" | openssl aes-256-cbc -md sha3-512 -a -pbkdf2 -k "$encryptionpw" | tr -d "\n"
 }
 
 
 function transport_decrypt(){
-  local encrypted_data="$1"
-  local encryptionpw=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
-  echo "$encrypted_data" | base64 -d | openssl aes-256-cbc -md sha3-512 -d -pbkdf2 -k "$encryptionpw" | tr -d "\0"
+	local encrypted_data="$1"
+	local encryptionpw=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
+	echo "$encrypted_data" | base64 -d | openssl aes-256-cbc -md sha3-512 -d -pbkdf2 -k "$encryptionpw" | tr -d "\0"
 }
 
 
@@ -183,19 +183,19 @@ function init () {
 		2|3)
 			transporttoken=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
 			echo -n "$transporttoken" | base64 -w0 | base64 -w0 >> "$SESSIONPATH.tmp"
-    	add_newline_if_missing "$SESSIONPATH.tmp"
-	    # activate local session
+			add_newline_if_missing "$SESSIONPATH.tmp"
+			# activate local session
 			mv "$SESSIONPATH.tmp" "$SESSIONPATH"
 			if [ $? != 0 ]; then
 				echo -e "Error: Local session activation unsuccessful.\n"
 				exit 1
 			else
-			  if [ "$(echo "$SERVERRESPONSE" | cut -d ' ' -f 1)" == "2" ]; then
-			    echo -n "Previous user DB missing, new DB created. "
-			  else
-			    echo -n "Using existing user DB. "
-			  fi
-			  echo "Local session and remote server DB aligned successfully."
+				if [ "$(echo "$SERVERRESPONSE" | cut -d ' ' -f 1)" == "2" ]; then
+					echo -n "Previous user DB missing, new DB created. "
+				else
+					echo -n "Using existing user DB. "
+				fi
+				echo "Local session and remote server DB aligned successfully."
 			fi
 			;;
 		*)
@@ -275,17 +275,17 @@ function init-change () {
 			echo
 			;;
 		2)
-		  transporttoken=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
+			transporttoken=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
 			echo -n "$transporttoken" | base64 -w0 | base64 -w0 >> "$SESSIONPATH.tmp"
-    	add_newline_if_missing "$SESSIONPATH.tmp"
-	    # activate local session
-	    echo "Updating local session."
+			add_newline_if_missing "$SESSIONPATH.tmp"
+			# activate local session
+			echo "Updating local session."
 			mv "$SESSIONPATH.tmp" "$SESSIONPATH"
 			if [ $? != 0 ]; then
 				echo -e "Error: Local session replacement unsuccessful.\n"
 				exit 1
 			else
-			  echo "Local session and remote server DB aligned successfully."
+				echo "Local session and remote server DB aligned successfully."
 			fi
 			;;
 		*)
@@ -332,7 +332,7 @@ function status () {
 		2)
 			echo -e "\nServer response OK:"
 			# remove response code
-      encrypted_data=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
+			encrypted_data=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
 			# decrypt transport encryption when response code is OK
 			decrypted_server_response=$(transport_decrypt "$encrypted_data")
 			echo "$decrypted_server_response"
@@ -416,8 +416,8 @@ function add () {
 			echo
 			;;
 		2)
-		  # remove response code
-      encrypted_data=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
+			# remove response code
+			encrypted_data=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
 			# decrypt transport encryption when response code is OK
 			decrypted_server_response=$(transport_decrypt "$encrypted_data")
 			echo "$decrypted_server_response"
@@ -466,8 +466,8 @@ function get () {
 			echo
 			;;
 		2)
-		  # remove response code
-      encrypted_data=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
+			# remove response code
+			encrypted_data=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
 			# decrypt transport encryption when response code is OK
 			decrypted_server_response=$(transport_decrypt "$encrypted_data")
 			# try key session if available
@@ -545,8 +545,8 @@ function get () {
 			wait # wait for muliprocess chain to finish
 			;;
 		3)
-		  # remove response code
-      encrypted_data=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
+			# remove response code
+			encrypted_data=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
 			# decrypt transport encryption when response code is OK
 			decrypted_server_response=$(transport_decrypt "$encrypted_data")
 			echo -e "\nPartly matched records found:\n"
@@ -597,8 +597,8 @@ function list () {
 			echo
 			;;
 		2|3)
-		  # remove response code
-      encrypted_data=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
+			# remove response code
+			encrypted_data=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
 			# decrypt transport encryption when response code is OK
 			decrypted_server_response=$(transport_decrypt "$encrypted_data")
 			echo -e "\nRecords found:\n"
@@ -646,17 +646,17 @@ function delete () {
 			echo
 			;;
 		2|3)
-		  # remove response code
-      encrypted_data=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
+			# remove response code
+			encrypted_data=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
 			# decrypt transport encryption when response code is OK
 			decrypted_server_response=$(transport_decrypt "$encrypted_data")
 			if [ "$(echo "$SERVERRESPONSE" | cut -d ' ' -f 1)" == "2" ]; then  # exact match deleted
-			  echo -e "\nServer record deletion OK:"
-			  echo "$decrypted_server_response"
+				echo -e "\nServer record deletion OK:"
+				echo "$decrypted_server_response"
 			else  # multiple matches, no deletion executed
-			  echo -e "\nRecords found:\n"
-			  echo "$decrypted_server_response"
-			  echo -e "\nSpecify exact record name."
+				echo -e "\nRecords found:\n"
+				echo "$decrypted_server_response"
+				echo -e "\nSpecify exact record name."
 			fi
 			echo
 			;;
@@ -740,7 +740,7 @@ function update () {
 			;;
 		2)
 			# remove response code
-      encrypted_data=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
+			encrypted_data=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
 			# decrypt transport encryption when response code is OK
 			decrypted_server_response=$(transport_decrypt "$encrypted_data")
 			echo "$decrypted_server_response"
@@ -778,8 +778,8 @@ function backup () {
 			echo
 			;;
 		2)
-		  # remove response code
-      encrypted_data=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
+			# remove response code
+			encrypted_data=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
 			# decrypt transport encryption when response code is OK
 			decrypted_server_response=$(transport_decrypt "$encrypted_data")
 			echo -e "\nServer response OK:"
