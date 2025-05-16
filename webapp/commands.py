@@ -49,7 +49,11 @@ def init(server, sessionuser, sessionpw, new):
                 log(line)
                 return False
             elif 'aligned successfully'.casefold() in line.casefold():
-                log('Handshake success.')
+                if 'db missing'.casefold() in line.casefold():
+                    log('Missing user, new DB created. Handshake success.')
+                else:
+                    log('User found. Handshake success.')
+
         if child.isalive():
             child.close()
         # Print the final state of the child. Normally isalive() should be FALSE.
