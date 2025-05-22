@@ -40,6 +40,15 @@ function b64swap() {
 }
 
 
+function encode_request() {
+	local str_to_encode=$1
+	local unswapped_b64=$(echo -n "$str_to_encode" | gzip -1f | base64 -w0)
+	local swapped_b64=$(b64swap "$unswapped_b64")
+	local encoded_request=$(echo -n "$swapped_b64" | base64 -w0)
+	echo "$encoded_request"
+}
+
+
 function decode_response() {
 	local response=$1
 	local unswapped_serverresponse=$(echo "$response" | base64 -d)
@@ -169,9 +178,8 @@ function init () {
 	sessionuser=$(head -n 2 "$SESSIONPATH.tmp" | tail -n 1)
 	sessionpw=$(head -n 3 "$SESSIONPATH.tmp" | tail -n 1)
 	nonew=$(echo -n "$nonew" | base64 -w0 | base64 -w0)
-	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${nonew}" | gzip -1f | base64 -w0)
-	swapped_b64=$(b64swap "$unswapped_b64")
-	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -N -w 5 "$(head -n 1 "$SESSIONPATH.tmp")" $PORT)
+	encoded_request=$(encode_request "${command} ${sessionuser} ${sessionpw} ${nonew}")
+	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH.tmp")" $PORT)
 	response_valid $? $SERVERRESPONSE
 	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
 
@@ -263,9 +271,8 @@ function init-change () {
 	# align session with server and create a new user table if non-existent
 	echo -e "\nSyncing server."
 	command="init-change"
-	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${sessionnewuser}" "${sessionnewpw}" | gzip -1f | base64 -w0)
-	swapped_b64=$(b64swap "$unswapped_b64")
-	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -N -w 5 "$(head -n 1 "$SESSIONPATH.tmp")" $PORT)
+	encoded_request=$(encode_request "${command} ${sessionuser} ${sessionpw} ${sessionnewuser} ${sessionnewpw}")
+	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH.tmp")" $PORT)
 	response_valid $? $SERVERRESPONSE
 	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
 
@@ -318,9 +325,8 @@ function status () {
 	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
 
 	echo -e "\nChecking status..."
-	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${tokenmd5}" | gzip -1f | base64 -w0)
-	swapped_b64=$(b64swap "$unswapped_b64")
-	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
+	encoded_request=$(encode_request "${command} ${sessionuser} ${sessionpw} ${tokenmd5}")
+	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	response_valid $? $SERVERRESPONSE
 	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
 
@@ -404,9 +410,8 @@ function add () {
 	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
 
 	echo -e "\nAdding record...\n"
-	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${tokenmd5}" "${title}" "${username}" "${pw}" "${extra}" "${verification}" | gzip -1f | base64 -w0)
-	swapped_b64=$(b64swap "$unswapped_b64")
-	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
+	encoded_request=$(encode_request "${command} ${sessionuser} ${sessionpw} ${tokenmd5} ${title} ${username} ${pw} ${extra} ${verification}")
+	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	response_valid $? $SERVERRESPONSE
 	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
 
@@ -454,9 +459,8 @@ function get () {
 	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
 
 	echo -e "\nFetching record..."
-	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${tokenmd5}" "${title}" | gzip -1f | base64 -w0)
-	swapped_b64=$(b64swap "$unswapped_b64")
-	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
+	encoded_request=$(encode_request "${command} ${sessionuser} ${sessionpw} ${tokenmd5} ${title}")
+	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	response_valid $? $SERVERRESPONSE
 	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
 
@@ -585,9 +589,8 @@ function list () {
 	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
 
 	echo -e "\nFetching records..."
-	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${tokenmd5}" "${title}" | gzip -1f | base64 -w0)
-	swapped_b64=$(b64swap "$unswapped_b64")
-	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
+	encoded_request=$(encode_request "${command} ${sessionuser} ${sessionpw} ${tokenmd5} ${title}")
+	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	response_valid $? $SERVERRESPONSE
 	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
 
@@ -634,9 +637,8 @@ function delete () {
 	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
 
 	echo -e "\nDeleting record..."
-	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${tokenmd5}" "${title}" | gzip -1f | base64 -w0)
-	swapped_b64=$(b64swap "$unswapped_b64")
-	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
+	encoded_request=$(encode_request "${command} ${sessionuser} ${sessionpw} ${tokenmd5} ${title}")
+	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	response_valid $? $SERVERRESPONSE
 	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
 
@@ -727,9 +729,8 @@ function update () {
 	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
 
 	echo -e "\nUpdating record...\n"
-	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${tokenmd5}" "${title}" "${username}" "${pw}" "${extra}" "${verification}" | gzip -1f | base64 -w0)
-	swapped_b64=$(b64swap "$unswapped_b64")
-	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
+	encoded_request=$(encode_request "${command} ${sessionuser} ${sessionpw} ${tokenmd5} ${title} ${username} ${pw} ${extra} ${verification}")
+	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	response_valid $? $SERVERRESPONSE
 	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
 
@@ -766,9 +767,8 @@ function backup () {
 	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
 
 	echo -e "\nChecking status..."
-	unswapped_b64=$(echo -n "${command}" "${sessionuser}" "${sessionpw}" "${tokenmd5}" | gzip -1f | base64 -w0)
-	swapped_b64=$(b64swap "$unswapped_b64")
-	SERVERRESPONSE=$(echo -n "$swapped_b64" | base64 -w0 | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
+	encoded_request=$(encode_request "${command} ${sessionuser} ${sessionpw} ${tokenmd5}")
+	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	response_valid $? $SERVERRESPONSE
 	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
 
