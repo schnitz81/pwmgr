@@ -183,7 +183,7 @@ def interpret_and_process(received_data):
             returnmsg = f"1 Session credentials don't match server DB file ({config.db_path}/{sessionuser}.encdb)."
         elif not transporttoken:
             comms.log("Credentials match, but no matching transport encryption token found in DB that matches the client.")
-            returnmsg = f"1 No matching transport encryption token found in DB."
+            returnmsg = "1 No matching transport encryption token found in DB."
         else:
             print("Session check valid.")
             msg_to_encrypt = f"Success: Session check successful against server DB ({config.db_path}/{sessionuser}.encdb)."
@@ -231,7 +231,7 @@ def interpret_and_process(received_data):
             return returnmsg
         elif not transporttoken:
             comms.log("Credentials match, but no matching transport encryption token found in DB that matches the client.")
-            returnmsg = f"1 No matching transport encryption token found in DB."
+            returnmsg = "1 No matching transport encryption token found in DB."
             return returnmsg
         else:
             print("Session credentials received match server DB.")
@@ -332,7 +332,7 @@ def interpret_and_process(received_data):
             return returnmsg
         elif not transporttoken:
             comms.log("Credentials match, but no matching transport encryption token found in DB that matches the client.")
-            returnmsg = f"1 No matching transport encryption token found in DB."
+            returnmsg = "1 No matching transport encryption token found in DB."
             return returnmsg
         else:
             print("Session credentials received match server DB.")
@@ -403,7 +403,7 @@ def interpret_and_process(received_data):
             return returnmsg
         elif not transporttoken:
             comms.log("Credentials match, but no matching transport encryption token found in DB that matches the client.")
-            returnmsg = f"1 No matching transport encryption token found in DB."
+            returnmsg = "1 No matching transport encryption token found in DB."
             return returnmsg
         else:
             print("Session credentials received match server DB.")
@@ -475,7 +475,7 @@ def interpret_and_process(received_data):
             return returnmsg
         elif not transporttoken:
             comms.log("Credentials match, but no matching transport encryption token found in DB that matches the client.")
-            returnmsg = f"1 No matching transport encryption token found in DB."
+            returnmsg = "1 No matching transport encryption token found in DB."
             return returnmsg
         else:
             print("Session credentials received match server DB.")
@@ -565,6 +565,50 @@ def interpret_and_process(received_data):
             else:
                 returnmsg = f"1 Unable to backup database as unencrypted to {config.db_path}/{sessionuser}.db in server."
 
+        database.close_connection(conn)
+        return returnmsg
+
+    ### benchmark ##########################################################################################
+    elif command == 'benchmark':
+        try:
+            sessionuser = base64.b64decode(base64.b64decode(descrambled_data.split(' ')[1])).decode('utf8').rstrip()
+            sessionpw = base64.b64decode(base64.b64decode(descrambled_data.split(' ')[2])).decode('utf8').rstrip()
+            tokenmd5 = descrambled_data.split(' ')[3]
+        except Exception as b64decode_error:
+            print(f"Error: Unable to decode base64 data: {b64decode_error}")
+            returnmsg = "1 Invalid base64 data to decode."
+            return returnmsg
+
+        # verify db existence
+        if not file.file_exists(f'{config.db_path}/{sessionuser}.encdb'):
+            returnmsg = f"1 DB file ({config.db_path}/{sessionuser}.encdb) doesn't exist in server. Client and server session not aligned."
+            return returnmsg
+        else:
+            comms.log("DB exists.")
+
+        # connect to db
+        conn = database.create_connection(sessionuser, sessionpw)
+
+        # verify db connection
+        if not database.connected_to_db(conn):
+            returnmsg = f"1 Unable to decrypt and connect to existing server DB ({config.db_path}/{sessionuser}.encdb). Possibly wrong session password."
+            return returnmsg
+
+        # check and fetch transporttoken
+        transporttoken = datacrunch.fetch_token_from_hash(conn, tokenmd5)
+
+        # verify session credentials
+        if not database.credentials_match(conn, sessionuser, sessionpw):
+            returnmsg = f"1 Session credentials don't match server DB file ({config.db_path}/{sessionuser}.encdb)."
+        elif not transporttoken:
+            comms.log("Credentials match, but no matching transport encryption token found in DB that matches the client.")
+            returnmsg = "1 No matching transport encryption token found in DB."
+        else:
+            comms.log("Session check valid.")
+            msg_to_encrypt = "benchverify"
+            returnmsg = datacrunch.transport_encrypt(msg_to_encrypt, transporttoken)
+            comms.log(f"encrypted returnmsg: {returnmsg}")
+            returnmsg = f"2 {returnmsg}"
         database.close_connection(conn)
         return returnmsg
 
