@@ -795,6 +795,64 @@ function backup () {
 }
 
 
+function benchmark () {
+	sessioncheck
+	echo "Session status check."
+
+	command="benchmark"
+	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
+	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
+	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
+
+	echo -e "\nRunning benchmark..."
+	# initiate benchmark timer
+	benchmark_running_seconds=5
+	successful_responses_counter=0
+	start_timer=$SECONDS
+	while [[ "$((SECONDS-start_timer))" -lt "$benchmark_running_seconds" ]]; do
+		encoded_request=$(encode_request "${command} ${sessionuser} ${sessionpw} ${tokenmd5}")
+		tput setaf 9  # red character output
+		echo -n "#"
+		tput sgr0  # reset terminal back to normal colors
+		SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
+		response_valid $? $SERVERRESPONSE
+		SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
+
+		case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
+			1)
+				echo -e "\nServer error: $(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)"
+				echo
+				exit
+				;;
+			2)
+				# remove response code
+				encrypted_data=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
+				# decrypt transport encryption when response code is OK
+				decrypted_server_response=$(transport_decrypt "$encrypted_data")
+				if [ "$decrypted_server_response" == "benchverify" ]; then
+					successful_responses_counter=$((successful_responses_counter+1))
+					tput setaf 2  # green character output
+					echo -n "#"
+					tput sgr0  # reset terminal back to normal colors
+				else
+					echo -e "\nError: Invalid data. Return code correct, but no valid verification string found."
+					exit
+				fi
+				;;
+			*)
+				echo -e "\nUnknown error:"
+				echo "$SERVERRESPONSE"
+				echo
+				exit
+				;;
+		esac
+	done
+	if [[ "$((SECONDS-start_timer))" -eq "$benchmark_running_seconds" ]] || [[ "$((SECONDS-start_timer))" -gt "$benchmark_running_seconds" ]]; then
+		echo -e "\n\nBenchmark finished.\n$successful_responses_counter responses in $benchmark_running_seconds seconds.\n"
+	fi
+}
+
+
 function helptext () {  # Help text diplayed if no or non-existent input parameter is given.
 	cat <<'END'
 Run command:
@@ -860,6 +918,11 @@ COMMANDS:
 	For backup or debugging purpose. The [user].db file will automatically be
 	imported and converted to .encdb when running "init" if no [user].encdb file
 	is found in the db_path.
+
+- benchmark / bench / perftest
+	Run a short benchmark to measure the amount of server responses that are
+	received within a time window. The user DB is decrypted at every separate
+	request.
 END
 }
 
@@ -946,6 +1009,10 @@ elif [ "$1" == "update" ] || [ "$1" == "change" ] || [ "$1" == "edit" ]; then
 # backup parameter input - run backup procedure
 elif [ "$1" == "backup" ] || [ "$1" == "dump" ]; then
 	backup
+
+# benchmark parameter input - run backup procedure
+elif [ "$1" == "benchmark" ] || [ "$1" == "bench" ] || [ "$1" == "perftest" ]; then
+	benchmark
 
 else
 	helptext

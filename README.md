@@ -9,7 +9,7 @@ The server part listens to connections from a client and verifies the access wit
 
 ## Server
 - Choose folder path for the DB to be stored in the config.py.
-- Run the application: 
+- Run the application:
 - ```python3 -u main.py```
 
 ### Docker / Podman
@@ -24,7 +24,7 @@ Alt. use the Dockerfile to build it. The appropriate port needs to be forwarded 
 
 ### Requirements
 
-The client needs netcat-openbsd, openssl and gzip. 
+The client needs netcat-openbsd, openssl and gzip.
 
 ### Installation
 Download the client file and make it executable.<br>
@@ -33,10 +33,10 @@ Example:<br>
 
 ### Usage
 
-Run command:<br> 
+Run command:<br>
 ```pwmgr (parameter)```
 
-Init must be run first to create a session before the other commands can be used. This is the base of the client<->server interaction. 
+Init must be run first to create a session before the other commands can be used. This is the base of the client<->server interaction.
 
 - init / config<br>
   Create a session. This creates a local session config and attempts to create a remote server db session. If the username db already exists, it's reused. Previous session password must match.<br>
@@ -76,7 +76,11 @@ Init must be run first to create a session before the other commands can be used
   Dump the .encdb DB file of the current session to an unencrypted .db file.
   For backup or debugging purpose. The [user].db file will automatically be
   imported and converted to .encdb when running "init" if no [user].encdb file
-  is found in the db_path.
+  is found in the db_path.<br><br>
+- benchmark / bench / perftest<br>
+  Run a short benchmark to measure the amount of server responses that are
+  received within a time window. The user DB is decrypted at every separate
+  request.
 
 ### Environment variables
 
@@ -93,7 +97,7 @@ These can be used when running Docker/Podman:<br>
 ![screenshot](webapp/images/screenshot.png)
 
 The web-app is an alternative way of using the client. It also makes it easier to use pwmgr on mobile devices where terminals are rarely used.
-Since it only interacts with the terminal based client, it only needs the client part and can be run separately from the pwmgr server. 
+Since it only interacts with the terminal based client, it only needs the client part and can be run separately from the pwmgr server.
 
 ### Requirements
 
