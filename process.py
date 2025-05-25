@@ -537,6 +537,11 @@ def interpret_and_process(received_data):
         else:
             print("DB exists.")
 
+        # create old backup if backup already exists
+        if file.file_exists(f'{config.db_path}/{sessionuser}.db'):
+            comms.log(f"{config.db_path}/{sessionuser}.db already exists. Renaming to .old")
+            file.rename_file(f'{config.db_path}/{sessionuser}.db', f'{config.db_path}/{sessionuser}.db.old')
+
         # connect to db
         conn = database.create_connection(sessionuser, sessionpw)
 
