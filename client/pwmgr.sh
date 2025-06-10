@@ -6,17 +6,32 @@ KEY_SESSION_SECONDS=$((60*90))
 
 
 function response_valid() {
-	local nc_err=$1
-	local response=$2
-	if [[ $nc_err -ne 0 ]]; then
-		echo -e "Error: Connection error. No server response.\n"; exit 1
-	elif [ -z "$response" ]; then
+	local response=$1
+	if [ -z "$response" ]; then
 		echo -e "Error: Server response empty.\n"; exit 1
 	elif [ "${#response}" -lt 5 ]; then
 		echo -e "Error: Server response data too short: $response\n"; exit 1
 	elif [[ "$(echo -n "$response" | base64 -d 2>&1)" =~ "invalid" ]]; then
 		echo -e "Error: Server response is not valid base64 encoding: $response\n"; exit 1
 	fi
+}
+
+
+function connection_successful() {
+	local nc_err=$1
+	if [[ $nc_err -ne 0 ]]; then
+		echo -e "Error: Connection error. No server response.\n"; exit 1
+	fi
+}
+
+
+function server_request() {
+	local request=$1
+	local suffix=$2
+	response=$(echo -n "$request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH""$suffix")" "$PORT")
+	connection_successful $?
+	response_valid "$response"
+	echo -n "$response"
 }
 
 
@@ -179,8 +194,7 @@ function init () {
 	sessionpw=$(head -n 3 "$SESSIONPATH.tmp" | tail -n 1)
 	nonew=$(echo -n "$nonew" | base64 -w0 | base64 -w0)
 	encoded_request=$(encode_request "${command} ${sessionuser} ${sessionpw} ${nonew}")
-	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH.tmp")" $PORT)
-	response_valid $? $SERVERRESPONSE
+	SERVERRESPONSE=$(server_request "$encoded_request" ".tmp")
 	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
 
 	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
@@ -272,8 +286,7 @@ function init-change () {
 	echo -e "\nSyncing server."
 	command="init-change"
 	encoded_request=$(encode_request "${command} ${sessionuser} ${sessionpw} ${sessionnewuser} ${sessionnewpw}")
-	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH.tmp")" $PORT)
-	response_valid $? $SERVERRESPONSE
+	SERVERRESPONSE=$(server_request "$encoded_request" ".tmp")
 	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
 
 	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
@@ -326,8 +339,7 @@ function status () {
 
 	echo -e "\nChecking status..."
 	encoded_request=$(encode_request "${command} ${sessionuser} ${sessionpw} ${tokenmd5}")
-	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
-	response_valid $? $SERVERRESPONSE
+	SERVERRESPONSE=$(server_request "$encoded_request")
 	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
 
 	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
@@ -411,8 +423,7 @@ function add () {
 
 	echo -e "\nAdding record...\n"
 	encoded_request=$(encode_request "${command} ${sessionuser} ${sessionpw} ${tokenmd5} ${title} ${username} ${pw} ${extra} ${verification}")
-	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
-	response_valid $? $SERVERRESPONSE
+	SERVERRESPONSE=$(server_request "$encoded_request")
 	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
 
 	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
@@ -460,8 +471,7 @@ function get () {
 
 	echo -e "\nFetching record..."
 	encoded_request=$(encode_request "${command} ${sessionuser} ${sessionpw} ${tokenmd5} ${title}")
-	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
-	response_valid $? $SERVERRESPONSE
+	SERVERRESPONSE=$(server_request "$encoded_request")
 	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
 
 	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
@@ -590,8 +600,7 @@ function list () {
 
 	echo -e "\nFetching records..."
 	encoded_request=$(encode_request "${command} ${sessionuser} ${sessionpw} ${tokenmd5} ${title}")
-	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
-	response_valid $? $SERVERRESPONSE
+	SERVERRESPONSE=$(server_request "$encoded_request")
 	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
 
 	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
@@ -638,8 +647,7 @@ function delete () {
 
 	echo -e "\nDeleting record..."
 	encoded_request=$(encode_request "${command} ${sessionuser} ${sessionpw} ${tokenmd5} ${title}")
-	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
-	response_valid $? $SERVERRESPONSE
+	SERVERRESPONSE=$(server_request "$encoded_request")
 	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
 
 	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
@@ -730,8 +738,7 @@ function update () {
 
 	echo -e "\nUpdating record...\n"
 	encoded_request=$(encode_request "${command} ${sessionuser} ${sessionpw} ${tokenmd5} ${title} ${username} ${pw} ${extra} ${verification}")
-	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
-	response_valid $? $SERVERRESPONSE
+	SERVERRESPONSE=$(server_request "$encoded_request")
 	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
 
 	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
@@ -768,8 +775,7 @@ function backup () {
 
 	echo -e "\nChecking status..."
 	encoded_request=$(encode_request "${command} ${sessionuser} ${sessionpw} ${tokenmd5}")
-	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
-	response_valid $? $SERVERRESPONSE
+	SERVERRESPONSE=$(server_request "$encoded_request")
 	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
 
 	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
@@ -814,8 +820,7 @@ function benchmark () {
 		tput setaf 9  # red character output
 		echo -n "#"
 		tput sgr0  # reset terminal back to normal colors
-		SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
-		response_valid $? $SERVERRESPONSE
+		SERVERRESPONSE=$(server_request "$encoded_request")
 		SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
 
 		case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
