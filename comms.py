@@ -5,6 +5,9 @@ import datacrunch
 import bruteforcecheck
 import os
 import datetime
+# import thread module
+from _thread import *
+import threading
 
 
 FAILSTRINGS = [
@@ -17,6 +20,42 @@ FAILSTRINGS = [
     "invalid base64",
     "no matching transport encryption token"
 ]
+
+
+def threaded(connsock, addr):
+    # check IP ban
+    if not bruteforcecheck.is_allowed_to_login(addr[0]):
+        returnmsg = "1 Error: Client IP banned."
+    else:
+        try:
+            data = connsock.recv(16384)
+        except ConnectionResetError as conn_error:
+            print(f"Connection reset error: {conn_error}")
+            # disconnect the server
+            connsock.close()
+            return
+
+        # generate response
+        returnmsg = process.interpret_and_process(data)
+
+        # add to failed login list if credentials are wrong
+        if returnmsg[0] == '1':  # if an error will be returned
+            for i in range(len(FAILSTRINGS)):
+                if FAILSTRINGS[i].casefold() in returnmsg.casefold():  # check if error is caused by unauthorized behaviour
+                    bruteforcecheck.failed_auth(addr[0])
+    log(f"returnmsg to parse: {returnmsg}")
+
+    # encode response
+    returnmsg = datacrunch.scramble(returnmsg)
+
+    try:
+        connsock.send(returnmsg.encode('utf-8'))
+        print("Responded.")
+    except Exception as send_e:
+        print("Response send error:")
+        print(send_e)
+    # disconnect the server
+    connsock.close()
 
 
 def tcp_listen_and_reply():
@@ -48,48 +87,18 @@ def tcp_listen_and_reply():
     # bind the socket with server and port number
     s.bind((host, port))
 
-    # allow maximum 1 connection to the socket
-    s.listen(1)
+    # maximum connections allowed to the socket
+    s.listen(5)
 
-    c, addr = s.accept()
+    while True:
+        connsock, addr = s.accept()
 
-    # display client address
-    print(datetime.datetime.now(), " -------------------------------------------")
-    print("Connection from:", str(addr))
+        # display client address
+        print(datetime.datetime.now(), " -------------------------------------------")
+        print("Connection from:", str(addr))
 
-    # check IP ban
-    if not bruteforcecheck.is_allowed_to_login(addr[0]):
-        returnmsg = "1 Error: Client IP banned."
-    else:
-        try:
-            data = c.recv(16384)
-        except ConnectionResetError as conn_error:
-            print(f"Connection reset error: {conn_error}")
-            # disconnect the server
-            c.close()
-            return
-
-        # generate response
-        returnmsg = process.interpret_and_process(data)
-
-        # add to failed login list if credentials are wrong
-        if returnmsg[0] == '1':  # if an error will be returned
-            for i in range(len(FAILSTRINGS)):
-                if FAILSTRINGS[i].casefold() in returnmsg.casefold():  # check if error is caused by unauthorized behaviour
-                    bruteforcecheck.failed_auth(addr[0])
-    log(f"returnmsg to parse: {returnmsg}")
-
-    # encode response
-    returnmsg = datacrunch.scramble(returnmsg)
-
-    try:
-        c.send(returnmsg.encode('utf-8'))
-        print("Responded.")
-    except Exception as send_e:
-        print("Response send error:")
-        print(send_e)
-    # disconnect the server
-    c.close()
+        # create thread to handle connection
+        start_new_thread(threaded, (connsock, addr))
 
 
 def log(msg):
