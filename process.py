@@ -6,7 +6,11 @@ import config
 import comms
 
 
+
 def interpret_and_process(received_data):
+
+    global bench_instance
+
     # decode received data
     descrambled_data = datacrunch.descramble(received_data)
     # catch error
@@ -614,6 +618,10 @@ def interpret_and_process(received_data):
             returnmsg = datacrunch.transport_encrypt(msg_to_encrypt, transporttoken)
             comms.log(f"encrypted returnmsg: {returnmsg}")
             returnmsg = f"2 {returnmsg}"
+
+            # update bench instance
+
+
         database.close_connection(conn)
         return returnmsg
 

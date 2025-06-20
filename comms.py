@@ -10,6 +10,8 @@ from _thread import *
 import threading
 
 
+bench_instance = {'benchuser': None, 'bench': None, 'benchturn': 0}
+
 FAILSTRINGS = [
     "password is wrong",
     "wrong password",
@@ -23,6 +25,7 @@ FAILSTRINGS = [
 
 
 def threaded(connsock, addr):
+
     # check IP ban
     if not bruteforcecheck.is_allowed_to_login(addr[0]):
         returnmsg = "1 Error: Client IP banned."
