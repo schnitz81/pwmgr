@@ -5,10 +5,9 @@ import datacrunch
 import bruteforcecheck
 import os
 import datetime
-# import thread module
 from _thread import *
-import threading
-
+import logging
+from logging import log
 
 FAILSTRINGS = [
     "password is wrong",
@@ -23,6 +22,7 @@ FAILSTRINGS = [
 
 
 def threaded(connsock, addr):
+
     # check IP ban
     if not bruteforcecheck.is_allowed_to_login(addr[0]):
         returnmsg = "1 Error: Client IP banned."
@@ -30,7 +30,7 @@ def threaded(connsock, addr):
         try:
             data = connsock.recv(16384)
         except ConnectionResetError as conn_error:
-            print(f"Connection reset error: {conn_error}")
+            log(f"Connection reset error: {conn_error}", 0)
             # disconnect the server
             connsock.close()
             return
@@ -43,17 +43,20 @@ def threaded(connsock, addr):
             for i in range(len(FAILSTRINGS)):
                 if FAILSTRINGS[i].casefold() in returnmsg.casefold():  # check if error is caused by unauthorized behaviour
                     bruteforcecheck.failed_auth(addr[0])
-    log(f"returnmsg to parse: {returnmsg}")
+    log(f"returnmsg to parse: {returnmsg}", 2)
 
     # encode response
     returnmsg = datacrunch.scramble(returnmsg)
 
     try:
         connsock.send(returnmsg.encode('utf-8'))
-        print("Responded.")
+        if logging.benchmark_running_counter < 2:
+            log("Responded.", 1)
+            if logging.benchmark_running_counter == 1:
+                log("Benchmark started. Suppressing output for following benchmark connections.", 1)
     except Exception as send_e:
-        print("Response send error:")
-        print(send_e)
+        log("Response send error:", 0)
+        log(send_e, 0)
     # disconnect the server
     connsock.close()
 
@@ -69,7 +72,7 @@ def tcp_listen_and_reply():
         try:
             port = int(config.port)
         except:
-            print("Error: Port number needs to be defined in either config file or as PORT env variable.")
+            log("Error: Port number needs to be defined in either config file or as PORT env variable.", 0)
             exit(1)
     if 'HOST' in os.environ:  # host var
         host = os.environ['HOST']
@@ -77,7 +80,7 @@ def tcp_listen_and_reply():
         try:
             host = config.host
         except:
-            print("Error: Host address needs to be defined in either config file ('host') or as HOST env variable.")
+            log("Error: Host address needs to be defined in either config file ('host') or as HOST env variable.", 0)
             exit(1)
 
     # create a socket
@@ -94,26 +97,9 @@ def tcp_listen_and_reply():
         connsock, addr = s.accept()
 
         # display client address
-        print(datetime.datetime.now(), " -------------------------------------------")
-        print("Connection from:", str(addr))
+        if logging.benchmark_running_counter == 0:
+            log(f"{datetime.datetime.now()} -------------------------------------------", 1)
+            log(f"Connection from: {str(addr)}", 1)
 
         # create thread to handle connection
         start_new_thread(threaded, (connsock, addr))
-
-
-def log(msg):
-    # set verbose output from env var if existing, otherwise config file
-    verbose_output = None
-    if 'VERBOSE_OUTPUT' in os.environ:
-        if os.environ['VERBOSE_OUTPUT'].casefold() == 'true' or os.environ['VERBOSE_OUTPUT'] == 1 or os.environ['VERBOSE_OUTPUT'].casefold() == 'yes':
-            verbose_output = True
-    else:
-        try:
-            if config.verbose_output.casefold() == 'true' or config.verbose_output == 1 or config.verbose_output.casefold() == 'yes':
-                verbose_output = True
-        except NameError:
-            print("Error: verbose_output needs to be defined as true/false in either config file or as VERBOSE_OUTPUT env variable.")
-            exit(1)
-
-    if verbose_output:
-        print(msg)

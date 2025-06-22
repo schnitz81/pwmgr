@@ -1,10 +1,11 @@
 import base64
-import config
 import sqlite3
 from io import StringIO
 import file
-import comms
 import hashlib
+import config
+import logging
+from logging import log
 
 
 def connected_to_db(conn):
@@ -18,17 +19,19 @@ def connected_to_db(conn):
 
 def create_connection(sessionuser, sessionpw):
     # create db connection and create new db if both db and backup are missing
-    print(f"Creating inmem db.")
+    if logging.benchmark_running_counter == 0:
+        log("Creating inmem db.", 1)
     conn = None
     try:
         conn = sqlite3.connect(":memory:")
     except Exception as e:
-        print(e)
+        log(e, 0)
         conn.close()
     # read db file, decrypt and read into inmem sqlite db
     if file.file_exists(f'{config.db_path}/{sessionuser}.encdb'):  # encrypted .encdb file
         try:
-            print(f"{sessionuser}.encdb file exists. Decrypting and reading.")
+            if logging.benchmark_running_counter == 0:
+                log(f"{sessionuser}.encdb file exists. Decrypting and reading.", 1)
             memfile = StringIO()
             decrypted_data = file.read_and_decrypt_file(f'{config.db_path}/{sessionuser}.encdb', sessionpw)
             memfile.write(decrypted_data)
@@ -36,18 +39,18 @@ def create_connection(sessionuser, sessionpw):
             conn.cursor().executescript(memfile.read())
             conn.commit()
         except Exception as read_encrypted_db_to_mem_e:
-            print(f"DB decryption error: {read_encrypted_db_to_mem_e}")
+            log(f"DB decryption error: {read_encrypted_db_to_mem_e}", 0)
             conn.close()
     # read unencrypted .db file if it's the only db file with the user name available
     elif file.file_exists(f'{config.db_path}/{sessionuser}.db'):
         try:
-            print(f"{sessionuser}.encdb db file not found. but {sessionuser}.db found. Reading as unencrypted db file.")
+            log(f"{sessionuser}.encdb db file not found. but {sessionuser}.db found. Reading as unencrypted db file.", 1)
             unenc_db_conn = sqlite3.connect(f'{config.db_path}/{sessionuser}.db', timeout=12)
             unenc_db_conn.backup(conn)
             conn.commit()
             unenc_db_conn.close()
         except Exception as read_unencrypted_db_to_mem_e:
-            print(read_unencrypted_db_to_mem_e)
+            log(read_unencrypted_db_to_mem_e, 0)
             conn.close()
     return conn
 
@@ -83,7 +86,7 @@ def create_tables(conn):
            );'''
         )
     except Exception as creation_e:
-        print(creation_e)
+        log(creation_e, 0)
 
 
 def credentials_exist(conn):
@@ -107,7 +110,7 @@ def credentials_match(conn, sessionuser, sessionpw):
             hashed_dbsessionpw = c.fetchone()[0]
             hashed_sessionpw = hashlib.sha3_512(sessionpw.encode()).hexdigest()
         except Exception as hashpw_e:
-            print(hashpw_e)
+            log(hashpw_e, 0)
         if dbsessionuser == sessionuser and hashed_dbsessionpw == hashed_sessionpw:
             return True
         else:
@@ -131,12 +134,12 @@ def store_credentials(conn, sessionuser, sessionpw):
     try:
         hashed_sessionpw = hashlib.sha3_512(sessionpw.encode()).hexdigest()
     except Exception as hashpw_e:
-        print(hashpw_e)
+        log(hashpw_e, 0)
     try:
         c.execute(f'''REPLACE INTO credentials (id, sessionuser, sessionpw) VALUES ('1', '{sessionuser}', '{hashed_sessionpw}');''')
         return True
     except Exception as store_e:
-        print(store_e)
+        log(store_e, 0)
         return False
 
 
@@ -147,7 +150,7 @@ def store_transporttoken(conn, token):
             c.execute(f'''INSERT INTO transporttokens (token) VALUES ('{token}');''')
             return True
         except Exception as storetoken_e:
-            print(storetoken_e)
+            log(storetoken_e, 0)
             return False
 
 
@@ -156,7 +159,7 @@ def get_all_transporttokens(conn):
     with conn:
         c.execute(f'''SELECT token FROM transporttokens;''')
         db_values = c.fetchall()
-        comms.log(db_values)
+        log(db_values, 2)
         return db_values
 
 
@@ -167,7 +170,7 @@ def store_record(conn, title, username, pw, extra, verification):
             c.execute(f'''REPLACE INTO records (title, username, pw, extra, verification) VALUES ('{title}', '{username}', '{pw}', '{extra}', '{verification}');''')
             return True
         except Exception as store_e:
-            print(f'DB storage error: {store_e}')
+            log(f'DB storage error: {store_e}', 0)
             return False
 
 
@@ -206,7 +209,7 @@ def list_partial_title_records(conn, title):
         c.execute(f'''SELECT title FROM records WHERE title LIKE '%{title}%' COLLATE NOCASE;''')
         db_values = c.fetchall()
         strlist = ' | '.join(map(','.join, db_values))
-        comms.log(strlist)
+        log(strlist, 2)
         return strlist
 
 
@@ -216,7 +219,7 @@ def list_all_title_records(conn):
         c.execute(f'''SELECT title FROM records;''')
         db_values = c.fetchall()
         strlist = ' | '.join(map(','.join, db_values))
-        comms.log(strlist)
+        log(strlist, 2)
         return strlist
 
 
@@ -229,7 +232,7 @@ def get_record(conn, title):
         b64_db_title = base64.b64encode(base64.b64encode(db_title.encode('utf-8')))
         c.execute(f'''SELECT username, pw, extra, verification FROM records WHERE title='{title}' COLLATE NOCASE;''')
         strlist = b64_db_title.decode('utf-8') + ' ' + ' '.join(c.fetchone())
-        comms.log(strlist)
+        log(strlist, 2)
         return strlist
 
 
@@ -239,26 +242,26 @@ def delete_record(conn, title):
         c.execute(f'''DELETE FROM records WHERE title='{title}' COLLATE NOCASE;''')
         return True
     except Exception as deleterecord_e:
-        print(f"Error: Unable to delete db record {title}: {deleterecord_e}")
+        log(f"Error: Unable to delete db record {title}: {deleterecord_e}", 0)
         return False
 
 
 def write_inmem_db_to_file(conn, sessionuser, sessionpw):
     try:
         conn.commit()  # settling db before file writing
-        print("Encrypting and saving to file.")
+        log("Encrypting and saving to file.", 1)
         memfile = StringIO()
         for line in conn.iterdump():
             memfile.write('%s\n' % line)
         memfile.seek(0)
         db_encryption_rtn_code = file.encrypt_and_write_file(memfile.read(), f'{config.db_path}/{sessionuser}.encdb', sessionpw)
         if db_encryption_rtn_code == 0:
-            comms.log("Inmem DB written to file.")
+            log("Inmem DB written to file.", 2)
             return True
         else:
             return False
     except Exception as e:
-        print(e)
+        log(e, 0)
         conn.close()
         return False
 
@@ -271,13 +274,14 @@ def write_inmem_db_to_file_unencrypted(conn, sessionuser):
         unenc_db_conn.close()
         return True
     except Exception as read_unencrypted_db_to_mem_e:
-        print(read_unencrypted_db_to_mem_e)
+        log(read_unencrypted_db_to_mem_e, 0)
         conn.close()
-        comms.log(f"Error: Unsuccessful inmem DB to file dump. Unable to write {config.db_path}/{sessionuser}.db")
+        log(f"Error: Unsuccessful inmem DB to file dump. Unable to write {config.db_path}/{sessionuser}.db", 0)
         return False
 
 
 def close_connection(conn):
     conn.commit()
-    print("Disconnecting from DB.")
+    if logging.benchmark_running_counter == 0:
+        log("Disconnecting from DB.", 1)
     conn.close()

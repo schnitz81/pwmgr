@@ -3,9 +3,9 @@ import base64
 import zlib
 import string
 import secrets
-import comms
 import database
 import hashlib
+from logging import log
 
 
 def generate_token(length):
@@ -26,7 +26,7 @@ def b64swap(b64):
         swapped_b64 = swapped_b64.encode('utf-8')
         return swapped_b64
     else:
-        print("Error: b64 string received for swapping is too short.")
+        log("Error: b64 string received for swapping is too short.", 0)
 
 
 def scramble(data):
@@ -35,7 +35,7 @@ def scramble(data):
         uncompressed_data = data.encode("utf-8")
         compressed_data = zlib.compress(uncompressed_data, 1, wbits=zlib.MAX_WBITS | 16)
     except Exception as compress_error:
-        print(f"Error: Unable to compress base64:d data: {compress_error}")
+        log(f"Error: Unable to compress base64:d data: {compress_error}", 0)
         returnmsg = "1 Compress error."
         return returnmsg
     try:
@@ -45,7 +45,7 @@ def scramble(data):
         based_data = based_data.decode('utf8').rstrip()
         return based_data
     except Exception as b64encode_error:
-        print(f"Error: Unable to encode base64 data: {b64encode_error}")
+        log(f"Error: Unable to encode base64 data: {b64encode_error}", 0)
         returnmsg = "1 base64 encoding error."
         return returnmsg
 
@@ -56,7 +56,7 @@ def descramble(data):
         unswapped_b64 = b64swap(swapped_b64)
         debased_data = base64.b64decode(unswapped_b64)
     except Exception as b64decode_error:
-        print(f"Error: Unable to decode base64 data: {b64decode_error}")
+        log(f"Error: Unable to decode base64 data: {b64decode_error}", 0)
         returnmsg = "1 Invalid base64 data to decode."
         return returnmsg
     # decompress and convert to string
@@ -65,7 +65,7 @@ def descramble(data):
         decompressed_data = decompressed_data.decode('utf-8')
         return decompressed_data
     except Exception as decompress_error:
-        print(f"Error: Unable to decompress debase64:d data: {decompress_error}")
+        log(f"Error: Unable to decompress debase64:d data: {decompress_error}", 0)
         returnmsg = "1 Decompress error."
         return returnmsg
 
@@ -74,11 +74,11 @@ def fetch_token_from_hash(conn, tokenmd5):
     transporttokens = database.get_all_transporttokens(conn)
     # compare hashsums from end of the DB list
     for token in reversed(transporttokens):
-        comms.log(f"comparing {hashlib.md5(token[0].encode()).hexdigest()}")
+        log(f"Comparing {hashlib.md5(token[0].encode()).hexdigest()}", 2)
         if hashlib.md5(token[0].encode()).hexdigest() == tokenmd5:
-            comms.log(f"Found matching token for hash: {tokenmd5} ({token})")
+            log(f"Found matching token for hash: {tokenmd5} ({token})", 2)
             return token[0]
-    comms.log("Error: No matching token found.")
+    log("Debug: No matching token found in datacrunch function.", 2)
     return False
 
 
@@ -95,7 +95,7 @@ def transport_decrypt(data, transporttoken):
         )
         return openssl_output.stdout
     except Exception as openssl_e:
-        print(openssl_e)
+        log(openssl_e, 0)
 
 
 def transport_encrypt(data, transporttoken):
@@ -111,4 +111,4 @@ def transport_encrypt(data, transporttoken):
         )
         return openssl_output.stdout
     except Exception as openssl_e:
-        print(openssl_e)
+        log(openssl_e, 0)
