@@ -1,6 +1,7 @@
 import socket
 import time
 from collections import defaultdict
+from logging import log
 
 
 # parameters
@@ -35,7 +36,7 @@ def is_allowed_to_login(ip):
         if not is_valid_ipv4(ip):
             raise ValueError("Error: not a valid IP address.")
     except ValueError as e:
-        print(e)
+        log(e, 0)
         return False
 
     epochnow = int(time.time())
@@ -47,7 +48,7 @@ def is_allowed_to_login(ip):
         else:
             # delete ip from bantable if ban expired
             del bantable[ip]
-            print(f'{ip} unbanned.')
+            log(f'{ip} unbanned.', 1)
     return True
 
 
@@ -58,7 +59,7 @@ def failed_auth(ip):
         if not is_valid_ipv4(ip):
             raise ValueError("Error: not a valid IP address.")
     except ValueError as e:
-        print(e)
+        log(e, 0)
         return
 
     epochnow = int(time.time())
@@ -76,4 +77,4 @@ def failed_auth(ip):
     # ban IP if enough fail records within interval remain
     if len(failtable[ip]) >= MAX_TRIES_WITHIN_INTERVAL:
         bantable[ip] = epochnow
-        print(f'{ip} banned.')
+        log(f'{ip} banned.', 1)

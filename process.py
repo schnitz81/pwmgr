@@ -3,10 +3,12 @@ import database
 import file
 import datacrunch
 import config
-import comms
+import logging
+from logging import log
 
 
 def interpret_and_process(received_data):
+
     # decode received data
     descrambled_data = datacrunch.descramble(received_data)
     # catch error
@@ -14,12 +16,17 @@ def interpret_and_process(received_data):
         returnmsg = descrambled_data
         return returnmsg
 
-    comms.log(descrambled_data)
+    log(descrambled_data, 2)
 
     # interpret received command
     command = descrambled_data.split(' ')[0]
-    print(f'Command: {command}')
 
+    # reset benchmark counter at any other command except 'benchmark'
+    if command != 'benchmark':
+        logging.benchmark_running_counter = 0
+
+    if logging.benchmark_running_counter == 0:
+        log(f'Command: {command}', 1)
 
     ### init ############################################################################################
     if command == 'init':
@@ -28,13 +35,13 @@ def interpret_and_process(received_data):
             sessionpw = base64.b64decode(base64.b64decode(descrambled_data.split(' ')[2])).decode('utf8').rstrip()
             nonew = base64.b64decode(base64.b64decode(descrambled_data.split(' ')[3])).decode('utf8').rstrip()
         except Exception as b64decode_error:
-            print(f"Error: Unable to decode base64 data: {b64decode_error}")
+            log(f"Error: Unable to decode base64 data: {b64decode_error}", 0)
             returnmsg = "1 Invalid base64 data to decode."
             return returnmsg
 
         # only create new DB if nonew isn't set
         if nonew and not file.file_exists(f'{config.db_path}/{sessionuser}.encdb'):
-            print(f"Error: nonew selected and user DB ({config.db_path}/{sessionuser}.encdb) doesn't exist.")
+            log(f"Error: nonew selected and user DB ({config.db_path}/{sessionuser}.encdb) doesn't exist.", 0)
             returnmsg = f"1 nonew selected and user DB ({config.db_path}/{sessionuser}.encdb) doesn't exist."
             return returnmsg
 
@@ -55,7 +62,7 @@ def interpret_and_process(received_data):
         if database.credentials_exist(conn):
             # check if received credentials match db
             if database.credentials_match(conn, sessionuser, sessionpw):
-                print(f"Credentials match previous record in DB. Reusing server DB for '{sessionuser}'.")
+                log(f"Credentials match previous record in DB. Reusing server DB for '{sessionuser}'.", 1)
                 credentials_ok = True
             # received credentials don't match
             else:
@@ -64,7 +71,7 @@ def interpret_and_process(received_data):
         # credentials don't exist since before
         else:
             if database.store_credentials(conn, sessionuser, sessionpw):
-                print(f"No previous credentials for user '{sessionuser}' in DB. Saving.")
+                log(f"No previous credentials for user '{sessionuser}' in DB. Saving.", 1)
                 credentials_ok = True
                 created_new_db = True
             else:
@@ -94,7 +101,7 @@ def interpret_and_process(received_data):
             sessionnewuser = base64.b64decode(base64.b64decode(descrambled_data.split(' ')[3])).decode('utf8').rstrip()
             sessionnewpw = base64.b64decode(base64.b64decode(descrambled_data.split(' ')[4])).decode('utf8').rstrip()
         except Exception as b64decode_error:
-            print(f"Error: Unable to decode base64 data: {b64decode_error}")
+            log(f"Error: Unable to decode base64 data: {b64decode_error}", 0)
             returnmsg = "1 Invalid base64 data to decode."
             return returnmsg
 
@@ -103,7 +110,7 @@ def interpret_and_process(received_data):
             returnmsg = f"1 DB file ({config.db_path}/{sessionuser}.encdb) doesn't exist in server. Client and server session not aligned."
             return returnmsg
         else:
-            print("DB exists.")
+            log("DB exists.", 1)
 
         # connect to db
         conn = database.create_connection(sessionuser, sessionpw)
@@ -136,7 +143,7 @@ def interpret_and_process(received_data):
 
             # return rename and credentials change result
             if credentials_stored and dbfile_renamed and db_written:
-                print(f"Old credentials overwritten and DB file renamed successfully ({sessionuser} -> {sessionnewuser}).")
+                log(f"Old credentials overwritten and DB file renamed successfully ({sessionuser} -> {sessionnewuser}).", 1)
                 returnmsg = f"2 {transporttoken}"
             elif not credentials_stored:
                 returnmsg = "1 Credentials storing unsuccessful."
@@ -156,7 +163,7 @@ def interpret_and_process(received_data):
             sessionpw = base64.b64decode(base64.b64decode(descrambled_data.split(' ')[2])).decode('utf8').rstrip()
             tokenmd5 = descrambled_data.split(' ')[3]
         except Exception as b64decode_error:
-            print(f"Error: Unable to decode base64 data: {b64decode_error}")
+            log(f"Error: Unable to decode base64 data: {b64decode_error}", 0)
             returnmsg = "1 Invalid base64 data to decode."
             return returnmsg
 
@@ -165,7 +172,7 @@ def interpret_and_process(received_data):
             returnmsg = f"1 DB file ({config.db_path}/{sessionuser}.encdb) doesn't exist in server. Client and server session not aligned."
             return returnmsg
         else:
-            print("DB exists.")
+            log("DB exists.", 1)
 
         # connect to db
         conn = database.create_connection(sessionuser, sessionpw)
@@ -182,14 +189,14 @@ def interpret_and_process(received_data):
         if not database.credentials_match(conn, sessionuser, sessionpw):
             returnmsg = f"1 Session credentials don't match server DB file ({config.db_path}/{sessionuser}.encdb)."
         elif not transporttoken:
-            comms.log("Credentials match, but no matching transport encryption token found in DB that matches the client.")
+            log("Credentials match, but no matching transport encryption token found in DB that matches the client.", 2)
             returnmsg = "1 No matching transport encryption token found in DB."
         else:
-            print("Session check valid.")
+            log("Session check valid.", 1)
             msg_to_encrypt = f"Success: Session check successful against server DB ({config.db_path}/{sessionuser}.encdb)."
-            comms.log(f"returnmsg to encrypt: {msg_to_encrypt}")
+            log(f"returnmsg to encrypt: {msg_to_encrypt}", 2)
             returnmsg = datacrunch.transport_encrypt(msg_to_encrypt, transporttoken)
-            comms.log(f"encrypted returnmsg: {returnmsg}")
+            log(f"encrypted returnmsg: {returnmsg}", 2)
             returnmsg = f"2 {returnmsg}"
         database.close_connection(conn)
         return returnmsg
@@ -202,7 +209,7 @@ def interpret_and_process(received_data):
             sessionpw = base64.b64decode(base64.b64decode(descrambled_data.split(' ')[2])).decode('utf8').rstrip()
             tokenmd5 = descrambled_data.split(' ')[3]
         except Exception as b64decode_error:
-            print(f"Error: Unable to decode base64 data: {b64decode_error}")
+            log(f"Error: Unable to decode base64 data: {b64decode_error}", 0)
             returnmsg = "1 Invalid base64 data to decode."
             return returnmsg
 
@@ -211,7 +218,7 @@ def interpret_and_process(received_data):
             returnmsg = f"1 DB file ({config.db_path}/{sessionuser}.encdb) doesn't exist in server. Client and server session not aligned."
             return returnmsg
         else:
-            print("DB exists.")
+            log("DB exists.", 1)
 
         # connect to db
         conn = database.create_connection(sessionuser, sessionpw)
@@ -230,13 +237,13 @@ def interpret_and_process(received_data):
             database.close_connection(conn)
             return returnmsg
         elif not transporttoken:
-            comms.log("Credentials match, but no matching transport encryption token found in DB that matches the client.")
+            log("Credentials match, but no matching transport encryption token found in DB that matches the client.", 2)
             returnmsg = "1 No matching transport encryption token found in DB."
             return returnmsg
         else:
-            print("Session credentials received match server DB.")
+            log("Session credentials received match server DB.", 1)
 
-        print(descrambled_data.split(' ')[4])
+        log(descrambled_data.split(' ')[4], 2)
 
         # transport decryption
         title = datacrunch.transport_decrypt(descrambled_data.split(' ')[4], transporttoken).rstrip()
@@ -277,18 +284,18 @@ def interpret_and_process(received_data):
                     if not db_written:
                         returnmsg = "1 Unable to write changed DB to disk."
                     elif command == 'add':  # return message depending on command used
-                        print("Record added to DB.")
+                        log("Record added to DB.", 1)
                         msg_to_encrypt = "Record stored in DB successfully."
-                        comms.log(f"returnmsg to encrypt: {msg_to_encrypt}")
+                        log(f"returnmsg to encrypt: {msg_to_encrypt}", 2)
                         returnmsg = datacrunch.transport_encrypt(msg_to_encrypt, transporttoken)
-                        comms.log(f"encrypted returnmsg: {returnmsg}")
+                        log(f"encrypted returnmsg: {returnmsg}", 2)
                         returnmsg = f"2 {returnmsg}"
                     else:  # update command used
-                        print("Record updated in DB.")
+                        log("Record updated in DB.", 1)
                         msg_to_encrypt = "Record updated in DB successfully."
-                        comms.log(f"returnmsg to encrypt: {msg_to_encrypt}")
+                        log(f"returnmsg to encrypt: {msg_to_encrypt}", 2)
                         returnmsg = datacrunch.transport_encrypt(msg_to_encrypt, transporttoken)
-                        comms.log(f"encrypted returnmsg: {returnmsg}")
+                        log(f"encrypted returnmsg: {returnmsg}", 2)
                         returnmsg = f"2 {returnmsg}"
                 else:
                     returnmsg = "1 Record storing unsuccessful."
@@ -303,7 +310,7 @@ def interpret_and_process(received_data):
             sessionpw = base64.b64decode(base64.b64decode(descrambled_data.split(' ')[2])).decode('utf8').rstrip()
             tokenmd5 = descrambled_data.split(' ')[3]
         except Exception as b64decode_error:
-            print(f"Error: Unable to decode base64 data: {b64decode_error}")
+            log(f"Error: Unable to decode base64 data: {b64decode_error}", 0)
             returnmsg = "1 Invalid base64 data to decode."
             return returnmsg
 
@@ -312,7 +319,7 @@ def interpret_and_process(received_data):
             returnmsg = f"1 DB file ({config.db_path}/{sessionuser}.encdb) doesn't exist in server. Client and server session not aligned."
             return returnmsg
         else:
-            print("DB exists.")
+            log("DB exists.", 1)
 
         # connect to db
         conn = database.create_connection(sessionuser, sessionpw)
@@ -331,15 +338,15 @@ def interpret_and_process(received_data):
             database.close_connection(conn)
             return returnmsg
         elif not transporttoken:
-            comms.log("Credentials match, but no matching transport encryption token found in DB that matches the client.")
+            log("Credentials match, but no matching transport encryption token found in DB that matches the client.", 2)
             returnmsg = "1 No matching transport encryption token found in DB."
             return returnmsg
         else:
-            print("Session credentials received match server DB.")
+            log("Session credentials received match server DB.", 1)
 
         # transport decryption
         title = datacrunch.transport_decrypt(descrambled_data.split(' ')[4], transporttoken).rstrip()
-        comms.log(f"Getting title: {title}")
+        log(f"Getting title: {title}", 2)
         # if letter is missing in title
         if not any(c.isalpha() for c in title):
             returnmsg = "1 Invalid title name. At least one letter is required."
@@ -347,17 +354,17 @@ def interpret_and_process(received_data):
         # get record, exact match or multimatch suggestions
         elif database.exact_title_exists(conn, title):
             record = database.get_record(conn, title)
-            print("Record queried from DB.")
-            comms.log(f"record to encrypt: {record}")
+            log("Record queried from DB.", 1)
+            log(f"record to encrypt: {record}", 2)
             encrypted_record = datacrunch.transport_encrypt(record, transporttoken)
-            comms.log(f"encrypted returnmsg: {encrypted_record}")
+            log(f"encrypted returnmsg: {encrypted_record}", 2)
             returnmsg = f"2 {encrypted_record}"
         elif database.nbr_of_title_hits(conn, title) >= 1:
             records = database.list_partial_title_records(conn, title)
-            print("Partial match(es) only. List of partial matches queried from DB.")
-            comms.log(f"records to encrypt: {records}")
+            log("Partial match(es) only. List of partial matches queried from DB.", 1)
+            log(f"records to encrypt: {records}", 2)
             encrypted_records = datacrunch.transport_encrypt(records, transporttoken)
-            comms.log(f"encrypted returnmsg: {encrypted_records}")
+            log(f"encrypted returnmsg: {encrypted_records}", 2)
             returnmsg = f"3 {encrypted_records}"
         elif database.nbr_of_title_hits(conn, title) < 1:
             returnmsg = "1 No matching record found."
@@ -374,7 +381,7 @@ def interpret_and_process(received_data):
             sessionpw = base64.b64decode(base64.b64decode(descrambled_data.split(' ')[2])).decode('utf8').rstrip()
             tokenmd5 = descrambled_data.split(' ')[3]
         except Exception as b64decode_error:
-            print(f"Error: Unable to decode base64 data: {b64decode_error}")
+            log(f"Error: Unable to decode base64 data: {b64decode_error}", 0)
             returnmsg = "1 Invalid base64 data to decode."
             return returnmsg
 
@@ -383,7 +390,7 @@ def interpret_and_process(received_data):
             returnmsg = f"1 DB file ({config.db_path}/{sessionuser}.encdb) doesn't exist in server. Client and server session not aligned."
             return returnmsg
         else:
-            print("DB exists.")
+            log("DB exists.", 1)
 
         # connect to db
         conn = database.create_connection(sessionuser, sessionpw)
@@ -402,11 +409,11 @@ def interpret_and_process(received_data):
             database.close_connection(conn)
             return returnmsg
         elif not transporttoken:
-            comms.log("Credentials match, but no matching transport encryption token found in DB that matches the client.")
+            log("Credentials match, but no matching transport encryption token found in DB that matches the client.", 2)
             returnmsg = "1 No matching transport encryption token found in DB."
             return returnmsg
         else:
-            print("Session credentials received match server DB.")
+            log("Session credentials received match server DB.", 1)
 
         # transport decryption
         title = datacrunch.transport_decrypt(descrambled_data.split(' ')[4], transporttoken).rstrip()
@@ -418,18 +425,18 @@ def interpret_and_process(received_data):
         # if list all is requested
         elif title.casefold() == 'all'.casefold():
             records = database.list_all_title_records(conn)
-            print("List of all record titles queried from DB.")
-            comms.log(f"records to encrypt: {records}")
+            log("List of all record titles queried from DB.", 1)
+            log(f"records to encrypt: {records}", 2)
             encrypted_records = datacrunch.transport_encrypt(records, transporttoken)
-            comms.log(f"encrypted returnmsg: {encrypted_records}")
+            log(f"encrypted returnmsg: {encrypted_records}", 2)
             returnmsg = f"3 {encrypted_records}"
         # always get multimatch suggestions
         elif database.nbr_of_title_hits(conn, title) >= 1:
             records = database.list_partial_title_records(conn, title)
-            print("List of partial matches queried from DB.")
-            comms.log(f"records to encrypt: {records}")
+            log("List of partial matches queried from DB.", 1)
+            log(f"records to encrypt: {records}", 2)
             encrypted_records = datacrunch.transport_encrypt(records, transporttoken)
-            comms.log(f"encrypted returnmsg: {encrypted_records}")
+            log(f"encrypted returnmsg: {encrypted_records}", 2)
             returnmsg = f"3 {encrypted_records}"
         elif database.nbr_of_title_hits(conn, title) < 1:
             returnmsg = "1 No matching record found."
@@ -446,7 +453,7 @@ def interpret_and_process(received_data):
             sessionpw = base64.b64decode(base64.b64decode(descrambled_data.split(' ')[2])).decode('utf8').rstrip()
             tokenmd5 = descrambled_data.split(' ')[3]
         except Exception as b64decode_error:
-            print(f"Error: Unable to decode base64 data: {b64decode_error}")
+            log(f"Error: Unable to decode base64 data: {b64decode_error}", 0)
             returnmsg = "1 Invalid base64 data to decode."
             return returnmsg
 
@@ -455,7 +462,7 @@ def interpret_and_process(received_data):
             returnmsg = f"1 DB file ({config.db_path}/{sessionuser}.encdb) doesn't exist in server. Client and server session not aligned."
             return returnmsg
         else:
-            print("DB exists.")
+            log("DB exists.", 1)
 
         # connect to db
         conn = database.create_connection(sessionuser, sessionpw)
@@ -474,11 +481,11 @@ def interpret_and_process(received_data):
             database.close_connection(conn)
             return returnmsg
         elif not transporttoken:
-            comms.log("Credentials match, but no matching transport encryption token found in DB that matches the client.")
+            log("Credentials match, but no matching transport encryption token found in DB that matches the client.", 2)
             returnmsg = "1 No matching transport encryption token found in DB."
             return returnmsg
         else:
-            print("Session credentials received match server DB.")
+            log("Session credentials received match server DB.", 1)
 
         # transport decryption
         title = datacrunch.transport_decrypt(descrambled_data.split(' ')[4], transporttoken).rstrip()
@@ -494,11 +501,11 @@ def interpret_and_process(received_data):
             if not db_written:
                 returnmsg = "1 Unable to write changed DB to disk."
             elif record_deleted:
-                print("Record deleted from DB.")
+                log("Record deleted from DB.", 1)
                 msg_to_encrypt = "Record deleted from DB."
-                comms.log(f"returnmsg to encrypt: {msg_to_encrypt}")
+                log(f"returnmsg to encrypt: {msg_to_encrypt}", 2)
                 returnmsg = datacrunch.transport_encrypt(msg_to_encrypt, transporttoken)
-                comms.log(f"encrypted returnmsg: {returnmsg}")
+                log(f"encrypted returnmsg: {returnmsg}", 2)
                 returnmsg = f"2 {returnmsg}"
             else:
                 returnmsg = "1 Error when deleting record from DB."
@@ -506,10 +513,10 @@ def interpret_and_process(received_data):
         # always get multimatch suggestions
         elif database.nbr_of_title_hits(conn, title) >= 1:
             records = database.list_partial_title_records(conn, title)
-            print("Partial match(es) only. List of partial matches queried from DB instead of deleting.")
-            comms.log(f"records to encrypt: {records}")
+            log("Partial match(es) only. List of partial matches queried from DB instead of deleting.", 1)
+            log(f"records to encrypt: {records}", 2)
             encrypted_records = datacrunch.transport_encrypt(records, transporttoken)
-            comms.log(f"encrypted returnmsg: {encrypted_records}")
+            log(f"encrypted returnmsg: {encrypted_records}", 2)
             returnmsg = f"3 {encrypted_records}"
         elif database.nbr_of_title_hits(conn, title) < 1:
             returnmsg = "1 No matching record found."
@@ -526,7 +533,7 @@ def interpret_and_process(received_data):
             sessionpw = base64.b64decode(base64.b64decode(descrambled_data.split(' ')[2])).decode('utf8').rstrip()
             tokenmd5 = descrambled_data.split(' ')[3]
         except Exception as b64decode_error:
-            print(f"Error: Unable to decode base64 data: {b64decode_error}")
+            log(f"Error: Unable to decode base64 data: {b64decode_error}", 0)
             returnmsg = "1 Invalid base64 data to decode."
             return returnmsg
 
@@ -535,11 +542,11 @@ def interpret_and_process(received_data):
             returnmsg = f"1 Encrypted DB file ({config.db_path}/{sessionuser}.encdb) not found in server. Unable to dump DB into backup file."
             return returnmsg
         else:
-            print("DB exists.")
+            log("DB exists.", 1)
 
         # create old backup if backup already exists
         if file.file_exists(f'{config.db_path}/{sessionuser}.db'):
-            comms.log(f"{config.db_path}/{sessionuser}.db already exists. Renaming to .old")
+            log(f"{config.db_path}/{sessionuser}.db already exists. Renaming to .old", 2)
             file.rename_file(f'{config.db_path}/{sessionuser}.db', f'{config.db_path}/{sessionuser}.db.old')
 
         # connect to db
@@ -561,17 +568,18 @@ def interpret_and_process(received_data):
         else:
             # dump DB into unencrypted file
             if database.write_inmem_db_to_file_unencrypted(conn, sessionuser):
-                print(f"Decrypted DB file saved to {config.db_path}/{sessionuser}.db")
+                log(f"Decrypted DB file saved to {config.db_path}/{sessionuser}.db", 1)
                 msg_to_encrypt = f"Database successfully backed up to {config.db_path}/{sessionuser}.db in server."
-                comms.log(f"returnmsg to encrypt: {msg_to_encrypt}")
+                log(f"returnmsg to encrypt: {msg_to_encrypt}", 2)
                 returnmsg = datacrunch.transport_encrypt(msg_to_encrypt, transporttoken)
-                comms.log(f"encrypted returnmsg: {returnmsg}")
+                log(f"encrypted returnmsg: {returnmsg}", 2)
                 returnmsg = f"2 {returnmsg}"
             else:
                 returnmsg = f"1 Unable to backup database as unencrypted to {config.db_path}/{sessionuser}.db in server."
 
         database.close_connection(conn)
         return returnmsg
+
 
     ### benchmark ##########################################################################################
     elif command == 'benchmark':
@@ -580,7 +588,7 @@ def interpret_and_process(received_data):
             sessionpw = base64.b64decode(base64.b64decode(descrambled_data.split(' ')[2])).decode('utf8').rstrip()
             tokenmd5 = descrambled_data.split(' ')[3]
         except Exception as b64decode_error:
-            print(f"Error: Unable to decode base64 data: {b64decode_error}")
+            log(f"Error: Unable to decode base64 data: {b64decode_error}", 0)
             returnmsg = "1 Invalid base64 data to decode."
             return returnmsg
 
@@ -589,7 +597,7 @@ def interpret_and_process(received_data):
             returnmsg = f"1 DB file ({config.db_path}/{sessionuser}.encdb) doesn't exist in server. Client and server session not aligned."
             return returnmsg
         else:
-            comms.log("DB exists.")
+            log("DB exists.", 2)
 
         # connect to db
         conn = database.create_connection(sessionuser, sessionpw)
@@ -606,14 +614,18 @@ def interpret_and_process(received_data):
         if not database.credentials_match(conn, sessionuser, sessionpw):
             returnmsg = f"1 Session credentials don't match server DB file ({config.db_path}/{sessionuser}.encdb)."
         elif not transporttoken:
-            comms.log("Credentials match, but no matching transport encryption token found in DB that matches the client.")
+            log("Credentials match, but no matching transport encryption token found in DB that matches the client.", 2)
             returnmsg = "1 No matching transport encryption token found in DB."
         else:
-            comms.log("Session check valid.")
+            log("Session check valid.", 2)
             msg_to_encrypt = "benchverify"
             returnmsg = datacrunch.transport_encrypt(msg_to_encrypt, transporttoken)
-            comms.log(f"encrypted returnmsg: {returnmsg}")
+            log(f"encrypted returnmsg: {returnmsg}", 2)
             returnmsg = f"2 {returnmsg}"
+
+            # increase benchmark counter for logging suppression at non-verbose logging
+            logging.benchmark_running_counter += 1
+
         database.close_connection(conn)
         return returnmsg
 

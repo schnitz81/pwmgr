@@ -1,5 +1,6 @@
 import os
 import subprocess
+from logging import log
 
 
 def file_exists(filepath):
@@ -14,8 +15,8 @@ def rename_file(old_filepath, new_filepath):
         os.rename(old_filepath, new_filepath)
         return True
     except Exception as rename_e:
-        print("Error: Unable to rename file:")
-        print(rename_e)
+        log("Error: Unable to rename file:", 0)
+        log(rename_e, 0)
         return False
 
 
@@ -31,7 +32,7 @@ def read_and_decrypt_file(file, file_encryption_pw):
         )
         return openssl_output.stdout
     except Exception as openssl_e:
-        print(openssl_e)
+        log(openssl_e, 0)
 
 
 def encrypt_and_write_file(memcontent, file, file_encryption_pw):
@@ -46,4 +47,4 @@ def encrypt_and_write_file(memcontent, file, file_encryption_pw):
         )
         return openssl_output.returncode
     except Exception as openssl_e:
-        print(openssl_e)
+        log(openssl_e, 0)
