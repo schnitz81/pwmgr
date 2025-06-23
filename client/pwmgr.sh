@@ -3,6 +3,7 @@
 PORT=48222
 SESSIONPATH="$HOME/.config/pwmgr/.session"
 KEY_SESSION_SECONDS=$((60*90))
+DEPENDENCIES=("nc" "base64" "openssl" "gzip")
 
 
 function response_valid() {
@@ -938,29 +939,17 @@ if [[ $nbrOfParams -gt 1 ]]; then
 	fi
 fi
 
-# check if netcat is installed
-if [ -z "$(which nc 2>/dev/null)" ]; then
-	echo "netcat not found. netcat-openbsd version of netcat needed."
-	exit 1
-fi
-
-# check if base64 is installed
-if [ -z "$(which base64 2>/dev/null)" ]; then
-	echo "base64 not found."
-	exit 1
-fi
-
-# check if openssl is installed
-if [ -z "$(which openssl 2>/dev/null)" ]; then
-	echo "openssl not found."
-	exit 1
-fi
-
-# check if gzip is installed
-if [ -z "$(which gzip 2>/dev/null)" ]; then
-	echo "gzip not found."
-	exit 1
-fi
+# dependencies check
+for dependency in "${DEPENDENCIES[@]}"; do
+	if ! command -v "$dependency" &> /dev/null; then
+		if [ "$dependency" != "nc" ]; then
+			echo "$dependency not found."
+		else  # specific info about netcat version needed if missing
+			echo "netcat not found. netcat-openbsd version of netcat needed."
+		fi
+		exit 1
+	fi
+done
 
 # init parameter input - run init procedure
 if [ "$1" == "init" ] || [ "$1" == "config" ]; then
