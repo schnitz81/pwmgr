@@ -29,7 +29,7 @@ def b64swap(b64):
         log("Error: b64 string received for swapping is too short.", 0)
 
 
-def scramble(data):
+def transport_encode(data):
     # compress and convert to string
     try:
         uncompressed_data = data.encode("utf-8")
@@ -41,29 +41,29 @@ def scramble(data):
     try:
         unswapped_b64 = base64.b64encode(compressed_data)
         swapped_b64 = b64swap(unswapped_b64)
-        based_data = base64.b64encode(swapped_b64)
-        based_data = based_data.decode('utf8').rstrip()
-        return based_data
+        encoded_data = base64.b64encode(swapped_b64)
+        encoded_data = encoded_data.decode('utf8').rstrip()
+        return encoded_data
     except Exception as b64encode_error:
         log(f"Error: Unable to encode base64 data: {b64encode_error}", 0)
         returnmsg = "1 base64 encoding error."
         return returnmsg
 
 
-def descramble(data):
+def transport_decode(data):
     try:
         swapped_b64 = base64.b64decode(data)
         unswapped_b64 = b64swap(swapped_b64)
-        debased_data = base64.b64decode(unswapped_b64)
+        compressed_data = base64.b64decode(unswapped_b64)
     except Exception as b64decode_error:
         log(f"Error: Unable to decode base64 data: {b64decode_error}", 0)
         returnmsg = "1 Invalid base64 data to decode."
         return returnmsg
     # decompress and convert to string
     try:
-        decompressed_data = zlib.decompress(debased_data, wbits=zlib.MAX_WBITS | 16)
-        decompressed_data = decompressed_data.decode('utf-8')
-        return decompressed_data
+        decoded_data = zlib.decompress(compressed_data, wbits=zlib.MAX_WBITS | 16)
+        decoded_data = decoded_data.decode('utf-8')
+        return decoded_data
     except Exception as decompress_error:
         log(f"Error: Unable to decompress debase64:d data: {decompress_error}", 0)
         returnmsg = "1 Decompress error."

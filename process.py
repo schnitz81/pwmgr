@@ -10,16 +10,16 @@ from logging import log
 def interpret_and_process(received_data):
 
     # decode received data
-    descrambled_data = datacrunch.descramble(received_data)
+    transportdecoded_data = datacrunch.transport_decode(received_data)
     # catch error
-    if '1 invalid base64' in descrambled_data.casefold() or '1 decompress error' in descrambled_data.casefold():
-        returnmsg = descrambled_data
+    if '1 invalid base64' in transportdecoded_data.casefold() or '1 decompress error' in transportdecoded_data.casefold():
+        returnmsg = transportdecoded_data
         return returnmsg
 
-    log(descrambled_data, 2)
+    log(transportdecoded_data, 2)
 
     # interpret received command
-    command = descrambled_data.split(' ')[0]
+    command = transportdecoded_data.split(' ')[0]
 
     # reset benchmark counter at any other command except 'benchmark'
     if command != 'benchmark':
@@ -31,9 +31,9 @@ def interpret_and_process(received_data):
     ### init ############################################################################################
     if command == 'init':
         try:
-            sessionuser = base64.b64decode(base64.b64decode(descrambled_data.split(' ')[1])).decode('utf8').rstrip()
-            sessionpw = base64.b64decode(base64.b64decode(descrambled_data.split(' ')[2])).decode('utf8').rstrip()
-            nonew = base64.b64decode(base64.b64decode(descrambled_data.split(' ')[3])).decode('utf8').rstrip()
+            sessionuser = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[1])).decode('utf8').rstrip()
+            sessionpw = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[2])).decode('utf8').rstrip()
+            nonew = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[3])).decode('utf8').rstrip()
         except Exception as b64decode_error:
             log(f"Error: Unable to decode base64 data: {b64decode_error}", 0)
             returnmsg = "1 Invalid base64 data to decode."
@@ -96,10 +96,10 @@ def interpret_and_process(received_data):
     ### init-change ############################################################################################
     elif command == 'init-change':
         try:
-            sessionuser = base64.b64decode(base64.b64decode(descrambled_data.split(' ')[1])).decode('utf8').rstrip()
-            sessionpw = base64.b64decode(base64.b64decode(descrambled_data.split(' ')[2])).decode('utf8').rstrip()
-            sessionnewuser = base64.b64decode(base64.b64decode(descrambled_data.split(' ')[3])).decode('utf8').rstrip()
-            sessionnewpw = base64.b64decode(base64.b64decode(descrambled_data.split(' ')[4])).decode('utf8').rstrip()
+            sessionuser = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[1])).decode('utf8').rstrip()
+            sessionpw = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[2])).decode('utf8').rstrip()
+            sessionnewuser = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[3])).decode('utf8').rstrip()
+            sessionnewpw = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[4])).decode('utf8').rstrip()
         except Exception as b64decode_error:
             log(f"Error: Unable to decode base64 data: {b64decode_error}", 0)
             returnmsg = "1 Invalid base64 data to decode."
@@ -159,9 +159,9 @@ def interpret_and_process(received_data):
     ### status ##########################################################################################
     elif command == 'status':
         try:
-            sessionuser = base64.b64decode(base64.b64decode(descrambled_data.split(' ')[1])).decode('utf8').rstrip()
-            sessionpw = base64.b64decode(base64.b64decode(descrambled_data.split(' ')[2])).decode('utf8').rstrip()
-            tokenmd5 = descrambled_data.split(' ')[3]
+            sessionuser = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[1])).decode('utf8').rstrip()
+            sessionpw = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[2])).decode('utf8').rstrip()
+            tokenmd5 = transportdecoded_data.split(' ')[3]
         except Exception as b64decode_error:
             log(f"Error: Unable to decode base64 data: {b64decode_error}", 0)
             returnmsg = "1 Invalid base64 data to decode."
@@ -205,9 +205,9 @@ def interpret_and_process(received_data):
     ### add | update #####################################################################################
     elif command == 'add' or command == 'update':
         try:
-            sessionuser = base64.b64decode(base64.b64decode(descrambled_data.split(' ')[1])).decode('utf8').rstrip()
-            sessionpw = base64.b64decode(base64.b64decode(descrambled_data.split(' ')[2])).decode('utf8').rstrip()
-            tokenmd5 = descrambled_data.split(' ')[3]
+            sessionuser = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[1])).decode('utf8').rstrip()
+            sessionpw = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[2])).decode('utf8').rstrip()
+            tokenmd5 = transportdecoded_data.split(' ')[3]
         except Exception as b64decode_error:
             log(f"Error: Unable to decode base64 data: {b64decode_error}", 0)
             returnmsg = "1 Invalid base64 data to decode."
@@ -243,14 +243,14 @@ def interpret_and_process(received_data):
         else:
             log("Session credentials received match server DB.", 1)
 
-        log(descrambled_data.split(' ')[4], 2)
+        log(transportdecoded_data.split(' ')[4], 2)
 
         # transport decryption
-        title = datacrunch.transport_decrypt(descrambled_data.split(' ')[4], transporttoken).rstrip()
-        username = datacrunch.transport_decrypt(descrambled_data.split(' ')[5], transporttoken).rstrip()
-        pw = datacrunch.transport_decrypt(descrambled_data.split(' ')[6], transporttoken).rstrip()
-        extra = datacrunch.transport_decrypt(descrambled_data.split(' ')[7], transporttoken).rstrip()
-        verification = datacrunch.transport_decrypt(descrambled_data.split(' ')[8], transporttoken).rstrip()
+        title = datacrunch.transport_decrypt(transportdecoded_data.split(' ')[4], transporttoken).rstrip()
+        username = datacrunch.transport_decrypt(transportdecoded_data.split(' ')[5], transporttoken).rstrip()
+        pw = datacrunch.transport_decrypt(transportdecoded_data.split(' ')[6], transporttoken).rstrip()
+        extra = datacrunch.transport_decrypt(transportdecoded_data.split(' ')[7], transporttoken).rstrip()
+        verification = datacrunch.transport_decrypt(transportdecoded_data.split(' ')[8], transporttoken).rstrip()
 
         # if letter is missing in title
         if not any(c.isalpha() for c in title):
@@ -306,9 +306,9 @@ def interpret_and_process(received_data):
     ### get ############################################################################################
     elif command == 'get':
         try:
-            sessionuser = base64.b64decode(base64.b64decode(descrambled_data.split(' ')[1])).decode('utf8').rstrip()
-            sessionpw = base64.b64decode(base64.b64decode(descrambled_data.split(' ')[2])).decode('utf8').rstrip()
-            tokenmd5 = descrambled_data.split(' ')[3]
+            sessionuser = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[1])).decode('utf8').rstrip()
+            sessionpw = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[2])).decode('utf8').rstrip()
+            tokenmd5 = transportdecoded_data.split(' ')[3]
         except Exception as b64decode_error:
             log(f"Error: Unable to decode base64 data: {b64decode_error}", 0)
             returnmsg = "1 Invalid base64 data to decode."
@@ -345,7 +345,7 @@ def interpret_and_process(received_data):
             log("Session credentials received match server DB.", 1)
 
         # transport decryption
-        title = datacrunch.transport_decrypt(descrambled_data.split(' ')[4], transporttoken).rstrip()
+        title = datacrunch.transport_decrypt(transportdecoded_data.split(' ')[4], transporttoken).rstrip()
         log(f"Getting title: {title}", 2)
         # if letter is missing in title
         if not any(c.isalpha() for c in title):
@@ -377,9 +377,9 @@ def interpret_and_process(received_data):
     ### list ############################################################################################
     elif command == 'list':
         try:
-            sessionuser = base64.b64decode(base64.b64decode(descrambled_data.split(' ')[1])).decode('utf8').rstrip()
-            sessionpw = base64.b64decode(base64.b64decode(descrambled_data.split(' ')[2])).decode('utf8').rstrip()
-            tokenmd5 = descrambled_data.split(' ')[3]
+            sessionuser = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[1])).decode('utf8').rstrip()
+            sessionpw = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[2])).decode('utf8').rstrip()
+            tokenmd5 = transportdecoded_data.split(' ')[3]
         except Exception as b64decode_error:
             log(f"Error: Unable to decode base64 data: {b64decode_error}", 0)
             returnmsg = "1 Invalid base64 data to decode."
@@ -416,7 +416,7 @@ def interpret_and_process(received_data):
             log("Session credentials received match server DB.", 1)
 
         # transport decryption
-        title = datacrunch.transport_decrypt(descrambled_data.split(' ')[4], transporttoken).rstrip()
+        title = datacrunch.transport_decrypt(transportdecoded_data.split(' ')[4], transporttoken).rstrip()
 
         # if letter is missing in title
         if not any(c.isalpha() for c in title):
@@ -449,9 +449,9 @@ def interpret_and_process(received_data):
     ### delete ############################################################################################
     elif command == 'delete':
         try:
-            sessionuser = base64.b64decode(base64.b64decode(descrambled_data.split(' ')[1])).decode('utf8').rstrip()
-            sessionpw = base64.b64decode(base64.b64decode(descrambled_data.split(' ')[2])).decode('utf8').rstrip()
-            tokenmd5 = descrambled_data.split(' ')[3]
+            sessionuser = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[1])).decode('utf8').rstrip()
+            sessionpw = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[2])).decode('utf8').rstrip()
+            tokenmd5 = transportdecoded_data.split(' ')[3]
         except Exception as b64decode_error:
             log(f"Error: Unable to decode base64 data: {b64decode_error}", 0)
             returnmsg = "1 Invalid base64 data to decode."
@@ -488,7 +488,7 @@ def interpret_and_process(received_data):
             log("Session credentials received match server DB.", 1)
 
         # transport decryption
-        title = datacrunch.transport_decrypt(descrambled_data.split(' ')[4], transporttoken).rstrip()
+        title = datacrunch.transport_decrypt(transportdecoded_data.split(' ')[4], transporttoken).rstrip()
 
         # if letter is missing in title
         if not any(c.isalpha() for c in title):
@@ -529,9 +529,9 @@ def interpret_and_process(received_data):
     ### backup ##########################################################################################
     elif command == 'backup':
         try:
-            sessionuser = base64.b64decode(base64.b64decode(descrambled_data.split(' ')[1])).decode('utf8').rstrip()
-            sessionpw = base64.b64decode(base64.b64decode(descrambled_data.split(' ')[2])).decode('utf8').rstrip()
-            tokenmd5 = descrambled_data.split(' ')[3]
+            sessionuser = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[1])).decode('utf8').rstrip()
+            sessionpw = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[2])).decode('utf8').rstrip()
+            tokenmd5 = transportdecoded_data.split(' ')[3]
         except Exception as b64decode_error:
             log(f"Error: Unable to decode base64 data: {b64decode_error}", 0)
             returnmsg = "1 Invalid base64 data to decode."
@@ -584,9 +584,9 @@ def interpret_and_process(received_data):
     ### benchmark ##########################################################################################
     elif command == 'benchmark':
         try:
-            sessionuser = base64.b64decode(base64.b64decode(descrambled_data.split(' ')[1])).decode('utf8').rstrip()
-            sessionpw = base64.b64decode(base64.b64decode(descrambled_data.split(' ')[2])).decode('utf8').rstrip()
-            tokenmd5 = descrambled_data.split(' ')[3]
+            sessionuser = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[1])).decode('utf8').rstrip()
+            sessionpw = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[2])).decode('utf8').rstrip()
+            tokenmd5 = transportdecoded_data.split(' ')[3]
         except Exception as b64decode_error:
             log(f"Error: Unable to decode base64 data: {b64decode_error}", 0)
             returnmsg = "1 Invalid base64 data to decode."
