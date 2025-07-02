@@ -46,7 +46,7 @@ def threaded(connsock, addr):
     log(f"returnmsg to parse: {returnmsg}", 2)
 
     # encode response
-    returnmsg = datacrunch.scramble(returnmsg)
+    returnmsg = datacrunch.transport_encode(returnmsg)
 
     try:
         connsock.send(returnmsg.encode('utf-8'))

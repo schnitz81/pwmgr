@@ -41,21 +41,21 @@ function b64swap() {
 }
 
 
-function encode_request() {
+function transport_encode() {
 	local str_to_encode=$1
-	local unswapped_b64=$(echo -n "$str_to_encode" | gzip -1f | base64 -w0)
-	local swapped_b64=$(b64swap "$unswapped_b64")
-	local encoded_request=$(echo -n "$swapped_b64" | base64 -w0)
-	echo "$encoded_request"
+	local compressed_b64_data=$(echo -n "$str_to_encode" | gzip -1f | base64 -w0)
+	local swapped_b64=$(b64swap "$compressed_b64_data")
+	local encoded_data=$(echo -n "$swapped_b64" | base64 -w0)
+	echo "$encoded_data"
 }
 
 
-function decode_response() {
-	local response=$1
-	local unswapped_serverresponse=$(echo "$response" | base64 -d)
-	local swapped_serverresponse=$(b64swap "$unswapped_serverresponse")
-	local uncompressed_response=$(echo "$swapped_serverresponse" | base64 -d | gunzip -f)
-	echo "$uncompressed_response"
+function transport_decode() {
+	local str_to_decode=$1
+	local swapped_b64=$(echo "$str_to_decode" | base64 -d)
+	local compressed_b64_data=$(b64swap "$swapped_b64")
+	local decoded_data=$(echo "$compressed_b64_data" | base64 -d | gunzip -f)
+  echo "$decoded_data"
 }
 
 
@@ -179,10 +179,10 @@ function init () {
 	sessionuser=$(head -n 2 "$SESSIONPATH.tmp" | tail -n 1)
 	sessionpw=$(head -n 3 "$SESSIONPATH.tmp" | tail -n 1)
 	nonew=$(echo -n "$nonew" | base64 -w0 | base64 -w0)
-	encoded_request=$(encode_request "${command} ${sessionuser} ${sessionpw} ${nonew}")
+	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${nonew}")
 	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH.tmp")" $PORT)
 	response_valid $? $SERVERRESPONSE
-	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
+	SERVERRESPONSE=$(transport_decode $SERVERRESPONSE)
 
 	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 		1)
@@ -272,10 +272,10 @@ function init-change () {
 	# align session with server and create a new user table if non-existent
 	echo -e "\nSyncing server."
 	command="init-change"
-	encoded_request=$(encode_request "${command} ${sessionuser} ${sessionpw} ${sessionnewuser} ${sessionnewpw}")
+	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${sessionnewuser} ${sessionnewpw}")
 	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH.tmp")" $PORT)
 	response_valid $? $SERVERRESPONSE
-	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
+	SERVERRESPONSE=$(transport_decode $SERVERRESPONSE)
 
 	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 		1)
@@ -326,10 +326,10 @@ function status () {
 	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
 
 	echo -e "\nChecking status..."
-	encoded_request=$(encode_request "${command} ${sessionuser} ${sessionpw} ${tokenmd5}")
+	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${tokenmd5}")
 	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	response_valid $? $SERVERRESPONSE
-	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
+	SERVERRESPONSE=$(transport_decode $SERVERRESPONSE)
 
 	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 		1)
@@ -339,9 +339,9 @@ function status () {
 		2)
 			echo -e "\nServer response OK:"
 			# remove response code
-			encrypted_data=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
+			encrypted_server_response=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
 			# decrypt transport encryption when response code is OK
-			decrypted_server_response=$(transport_decrypt "$encrypted_data")
+			decrypted_server_response=$(transport_decrypt "$encrypted_server_response")
 			echo "$decrypted_server_response"
 			echo
 			;;
@@ -411,10 +411,10 @@ function add () {
 	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
 
 	echo -e "\nAdding record...\n"
-	encoded_request=$(encode_request "${command} ${sessionuser} ${sessionpw} ${tokenmd5} ${title} ${username} ${pw} ${extra} ${verification}")
+	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${tokenmd5} ${title} ${username} ${pw} ${extra} ${verification}")
 	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	response_valid $? $SERVERRESPONSE
-	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
+	SERVERRESPONSE=$(transport_decode $SERVERRESPONSE)
 
 	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 		1)
@@ -423,9 +423,9 @@ function add () {
 			;;
 		2)
 			# remove response code
-			encrypted_data=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
+			encrypted_server_response=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
 			# decrypt transport encryption when response code is OK
-			decrypted_server_response=$(transport_decrypt "$encrypted_data")
+			decrypted_server_response=$(transport_decrypt "$encrypted_server_response")
 			echo "$decrypted_server_response"
 			echo "Remember your encryption password."
 			echo
@@ -460,10 +460,10 @@ function get () {
 	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
 
 	echo -e "\nFetching record..."
-	encoded_request=$(encode_request "${command} ${sessionuser} ${sessionpw} ${tokenmd5} ${title}")
+	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${tokenmd5} ${title}")
 	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	response_valid $? $SERVERRESPONSE
-	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
+	SERVERRESPONSE=$(transport_decode $SERVERRESPONSE)
 
 	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 		1)
@@ -472,9 +472,9 @@ function get () {
 			;;
 		2)
 			# remove response code
-			encrypted_data=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
+			encrypted_server_response=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
 			# decrypt transport encryption when response code is OK
-			decrypted_server_response=$(transport_decrypt "$encrypted_data")
+			decrypted_server_response=$(transport_decrypt "$encrypted_server_response")
 			# try key session if available
 			encryptionpw=$(get_key_from_key_session)
 			if [ -n "$encryptionpw" ]; then
@@ -551,9 +551,9 @@ function get () {
 			;;
 		3)
 			# remove response code
-			encrypted_data=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
+			encrypted_server_response=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
 			# decrypt transport encryption when response code is OK
-			decrypted_server_response=$(transport_decrypt "$encrypted_data")
+			decrypted_server_response=$(transport_decrypt "$encrypted_server_response")
 			echo -e "\nPartly matched records found:\n"
 			echo "$decrypted_server_response"
 			echo -e "\nSpecify exact title."
@@ -590,10 +590,10 @@ function list () {
 	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
 
 	echo -e "\nFetching records..."
-	encoded_request=$(encode_request "${command} ${sessionuser} ${sessionpw} ${tokenmd5} ${title}")
+	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${tokenmd5} ${title}")
 	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	response_valid $? $SERVERRESPONSE
-	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
+	SERVERRESPONSE=$(transport_decode $SERVERRESPONSE)
 
 	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 		1)
@@ -602,9 +602,9 @@ function list () {
 			;;
 		2|3)
 			# remove response code
-			encrypted_data=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
+			encrypted_server_response=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
 			# decrypt transport encryption when response code is OK
-			decrypted_server_response=$(transport_decrypt "$encrypted_data")
+			decrypted_server_response=$(transport_decrypt "$encrypted_server_response")
 			echo -e "\nRecords found:\n"
 			echo "$decrypted_server_response"
 			echo
@@ -638,10 +638,10 @@ function delete () {
 	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
 
 	echo -e "\nDeleting record..."
-	encoded_request=$(encode_request "${command} ${sessionuser} ${sessionpw} ${tokenmd5} ${title}")
+	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${tokenmd5} ${title}")
 	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	response_valid $? $SERVERRESPONSE
-	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
+	SERVERRESPONSE=$(transport_decode $SERVERRESPONSE)
 
 	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 		1)
@@ -650,9 +650,9 @@ function delete () {
 			;;
 		2|3)
 			# remove response code
-			encrypted_data=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
+			encrypted_server_response=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
 			# decrypt transport encryption when response code is OK
-			decrypted_server_response=$(transport_decrypt "$encrypted_data")
+			decrypted_server_response=$(transport_decrypt "$encrypted_server_response")
 			if [ "$(echo "$SERVERRESPONSE" | cut -d ' ' -f 1)" == "2" ]; then  # exact match deleted
 				echo -e "\nServer record deletion OK:"
 				echo "$decrypted_server_response"
@@ -730,10 +730,10 @@ function update () {
 	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
 
 	echo -e "\nUpdating record...\n"
-	encoded_request=$(encode_request "${command} ${sessionuser} ${sessionpw} ${tokenmd5} ${title} ${username} ${pw} ${extra} ${verification}")
+	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${tokenmd5} ${title} ${username} ${pw} ${extra} ${verification}")
 	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	response_valid $? $SERVERRESPONSE
-	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
+	SERVERRESPONSE=$(transport_decode $SERVERRESPONSE)
 
 	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 		1)
@@ -742,9 +742,9 @@ function update () {
 			;;
 		2)
 			# remove response code
-			encrypted_data=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
+			encrypted_server_response=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
 			# decrypt transport encryption when response code is OK
-			decrypted_server_response=$(transport_decrypt "$encrypted_data")
+			decrypted_server_response=$(transport_decrypt "$encrypted_server_response")
 			echo "$decrypted_server_response"
 			echo "Remember your encryption password."
 			echo
@@ -768,10 +768,10 @@ function backup () {
 	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
 
 	echo -e "\nChecking status..."
-	encoded_request=$(encode_request "${command} ${sessionuser} ${sessionpw} ${tokenmd5}")
+	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${tokenmd5}")
 	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	response_valid $? $SERVERRESPONSE
-	SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
+	SERVERRESPONSE=$(transport_decode $SERVERRESPONSE)
 
 	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 		1)
@@ -780,9 +780,9 @@ function backup () {
 			;;
 		2)
 			# remove response code
-			encrypted_data=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
+			encrypted_server_response=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
 			# decrypt transport encryption when response code is OK
-			decrypted_server_response=$(transport_decrypt "$encrypted_data")
+			decrypted_server_response=$(transport_decrypt "$encrypted_server_response")
 			echo -e "\nServer response OK:"
 			echo "$decrypted_server_response"
 			echo
@@ -811,13 +811,13 @@ function benchmark () {
 	successful_responses_counter=0
 	start_timer=$SECONDS
 	while [[ "$((SECONDS-start_timer))" -lt "$benchmark_running_seconds" ]]; do
-		encoded_request=$(encode_request "${command} ${sessionuser} ${sessionpw} ${tokenmd5}")
+		encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${tokenmd5}")
 		tput setaf 9  # red character output
 		echo -n "#"
 		tput sgr0  # reset terminal back to normal colors
 		SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 		response_valid $? $SERVERRESPONSE
-		SERVERRESPONSE=$(decode_response $SERVERRESPONSE)
+		SERVERRESPONSE=$(transport_decode $SERVERRESPONSE)
 
 		case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 			1)
@@ -827,9 +827,9 @@ function benchmark () {
 				;;
 			2)
 				# remove response code
-				encrypted_data=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
+				encrypted_server_response=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
 				# decrypt transport encryption when response code is OK
-				decrypted_server_response=$(transport_decrypt "$encrypted_data")
+				decrypted_server_response=$(transport_decrypt "$encrypted_server_response")
 				if [ "$decrypted_server_response" == "benchverify" ]; then
 					successful_responses_counter=$((successful_responses_counter+1))
 					tput setaf 2  # green character output
