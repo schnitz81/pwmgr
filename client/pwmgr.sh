@@ -523,7 +523,7 @@ function get () {
 					fi
 
 					# add encryption pw to key session
-					add_key_to_key_session "$encryptionpw"
+					add_key_to_key_session "$encryptionpw" &
 
 					# copy to X clipboard
 					if (( $copytoclipboard )); then
@@ -547,7 +547,7 @@ function get () {
 				echo -e "extra info: $extra\n"
 			) &
 
-			wait # wait for muliprocess chain to finish
+			wait  # wait for multiprocess chain to finish
 			;;
 		3)
 			# remove response code
