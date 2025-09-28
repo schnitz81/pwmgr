@@ -43,7 +43,8 @@ function b64swap() {
 
 function transport_encode() {
 	local str_to_encode=$1
-	local compressed_b64_data=$(echo -n "$str_to_encode" | gzip -1f | base64 -w0)
+	local encrypted_data=$(transport_encrypt "$str_to_encode" "0")
+	local compressed_b64_data=$(echo -n "$encrypted_data" | gzip -1f | base64 -w0)
 	local swapped_b64=$(b64swap "$compressed_b64_data")
 	local encoded_data=$(echo -n "$swapped_b64" | base64 -w0)
 	echo "$encoded_data"
@@ -55,7 +56,8 @@ function transport_decode() {
 	local swapped_b64=$(echo "$str_to_decode" | base64 -d)
 	local compressed_b64_data=$(b64swap "$swapped_b64")
 	local decoded_data=$(echo "$compressed_b64_data" | base64 -d | gunzip -f)
-  echo "$decoded_data"
+	local decrypted_data=$(transport_decrypt "$decoded_data" "0")
+	echo "$decrypted_data"
 }
 
 
@@ -118,14 +120,24 @@ function decrypt() {
 
 function transport_encrypt(){
 	local unencrypted_data="$1"
-	local encryptionpw=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
+	local pwskip="$2"
+	if [ "$pwskip" == "0" ]; then
+		local encryptionpw=""
+	else
+		local encryptionpw=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
+	fi
 	echo "$unencrypted_data" | openssl aes-256-cbc -md sha3-512 -a -pbkdf2 -k "$encryptionpw" | tr -d "\n"
 }
 
 
 function transport_decrypt(){
 	local encrypted_data="$1"
-	local encryptionpw=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
+	local pwskip="$2"
+	if [ "$pwskip" == "0" ]; then
+		local encryptionpw=""
+	else
+		local encryptionpw=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
+	fi
 	echo "$encrypted_data" | base64 -d | openssl aes-256-cbc -md sha3-512 -d -pbkdf2 -k "$encryptionpw" | tr -d "\0"
 }
 
@@ -176,9 +188,9 @@ function init () {
 	# align session with server and create a new user table if non-existent
 	echo -e "\nSyncing server."
 	command="init"
-	sessionuser=$(head -n 2 "$SESSIONPATH.tmp" | tail -n 1)
-	sessionpw=$(head -n 3 "$SESSIONPATH.tmp" | tail -n 1)
-	nonew=$(echo -n "$nonew" | base64 -w0 | base64 -w0)
+	sessionuser=$(head -n 2 "$SESSIONPATH.tmp" | tail -n 1 | base64 -d | base64 -d)
+	sessionpw=$(head -n 3 "$SESSIONPATH.tmp" | tail -n 1 | base64 -d | base64 -d)
+	nonew=$(echo -n "$nonew")
 	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${nonew}")
 	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH.tmp")" $PORT)
 	response_valid $? $SERVERRESPONSE
@@ -252,10 +264,6 @@ function init-change () {
 	# create folder for session file
 	mkdir -p "$(echo "$SESSIONPATH" | awk 'BEGIN{FS=OFS="/"}{NF--}1')"
 
-	# encode current credentials
-	sessionuser=$(echo -n "$sessionuser" | base64 -w0 | base64 -w0)
-	sessionpw=$(echo -n "$sessionpw" | base64 -w0 | base64 -w0)
-
 	# create local temp session
 	touch "$SESSIONPATH.tmp" && chmod 0600 "$SESSIONPATH.tmp" || (res=$?; echo -e "\nError: Failed to create temp session."; (exit $res))
 	echo "$server" > "$SESSIONPATH.tmp"
@@ -265,9 +273,9 @@ function init-change () {
 	add_newline_if_missing "$SESSIONPATH.tmp"
 	echo
 
-	# get new user and pw encoded
-	sessionnewuser=$(head -n 2 "$SESSIONPATH.tmp" | tail -n 1)
-	sessionnewpw=$(head -n 3 "$SESSIONPATH.tmp" | tail -n 1)
+	# get new user and pw
+	sessionnewuser=$(head -n 2 "$SESSIONPATH.tmp" | tail -n 1 | base64 -d | base64 -d)
+	sessionnewpw=$(head -n 3 "$SESSIONPATH.tmp" | tail -n 1 | base64 -d | base64 -d)
 
 	# align session with server and create a new user table if non-existent
 	echo -e "\nSyncing server."
@@ -321,8 +329,8 @@ function status () {
 	echo "Session status check."
 
 	command="status"
-	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
-	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
+	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
+	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
 	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
 
 	echo -e "\nChecking status..."
@@ -406,8 +414,8 @@ function add () {
 	verification=$(transport_encrypt $(encrypt "verification" "$encryptionpw"))
 
 	command="add"
-	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
-	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
+	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
+	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
 	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
 
 	echo -e "\nAdding record...\n"
@@ -455,8 +463,8 @@ function get () {
 
 	command="get"
 	title=$(transport_encrypt "$title")
-	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
-	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
+	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
+	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
 	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
 
 	echo -e "\nFetching record..."
@@ -585,8 +593,8 @@ function list () {
 
 	command="list"
 	title=$(transport_encrypt "$title")
-	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
-	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
+	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
+	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
 	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
 
 	echo -e "\nFetching records..."
@@ -633,8 +641,8 @@ function delete () {
 
 	command="delete"
 	title=$(transport_encrypt "$title")
-	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
-	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
+	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
+	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
 	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
 
 	echo -e "\nDeleting record..."
@@ -725,8 +733,8 @@ function update () {
 	verification=$(transport_encrypt $(encrypt "verification" "$encryptionpw"))
 
 	command="update"
-	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
-	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
+	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
+	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
 	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
 
 	echo -e "\nUpdating record...\n"
@@ -763,8 +771,8 @@ function backup () {
 	echo "Decrypt and backup database file."
 
 	command="backup"
-	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
-	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
+	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
+	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
 	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
 
 	echo -e "\nChecking status..."
@@ -801,8 +809,8 @@ function benchmark () {
 	echo "Session status check."
 
 	command="benchmark"
-	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1)
-	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1)
+	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
+	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
 	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
 
 	echo -e "\nRunning benchmark..."
@@ -956,6 +964,8 @@ if [ "$1" == "init" ] || [ "$1" == "config" ]; then
 	# new session creation block option
 	if [[ $nbrOfParams -gt 1 ]] && [ "$2" == "--nonew" ]; then
 		nonew=1
+	else
+		nonew=0
 	fi
 	init
 

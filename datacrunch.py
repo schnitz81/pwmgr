@@ -32,8 +32,13 @@ def b64swap(b64):
 def transport_encode(data):
     # compress and convert to string
     try:
-        uncompressed_data = data.encode("utf-8")
-        compressed_data = zlib.compress(uncompressed_data, 1, wbits=zlib.MAX_WBITS | 16)
+        enc_data = transport_encrypt(data, '').encode("utf-8")
+    except Exception as encrypt_error:
+        log(f"Error: Unable to transport-encrypt return data: {encrypt_error}", 0)
+        returnmsg = "1 Encrypt error."
+        return returnmsg
+    try:
+        compressed_data = zlib.compress(enc_data, 1, wbits=zlib.MAX_WBITS | 16)
     except Exception as compress_error:
         log(f"Error: Unable to compress base64:d data: {compress_error}", 0)
         returnmsg = "1 Compress error."
@@ -61,20 +66,26 @@ def transport_decode(data):
         return returnmsg
     # decompress and convert to string
     try:
-        decoded_data = zlib.decompress(compressed_data, wbits=zlib.MAX_WBITS | 16)
-        decoded_data = decoded_data.decode('utf-8')
-        return decoded_data
+        encrypted_data = zlib.decompress(compressed_data, wbits=zlib.MAX_WBITS | 16).decode('utf8') #.decode('utf-8')
     except Exception as decompress_error:
         log(f"Error: Unable to decompress debase64:d data: {decompress_error}", 0)
         returnmsg = "1 Decompress error."
         return returnmsg
+    try:
+        decr_data = transport_decrypt(encrypted_data, '')
+        return decr_data
+    except Exception as decrypt_error:
+        log(f"Error: Unable to transport-decrypt decoded:d data: {decrypt_error}", 0)
+        returnmsg = "1 Decrypt error."
+        return returnmsg
+
 
 
 def fetch_token_from_hash(conn, tokenmd5):
     transporttokens = database.get_all_transporttokens(conn)
     # compare hashsums from end of the DB list
     for token in reversed(transporttokens):
-        log(f"Comparing {hashlib.md5(token[0].encode()).hexdigest()}", 2)
+        log(f"Comparing {hashlib.md5(token[0].encode()).hexdigest()} with {tokenmd5}", 2)
         if hashlib.md5(token[0].encode()).hexdigest() == tokenmd5:
             log(f"Found matching token for hash: {tokenmd5} ({token})", 2)
             return token[0]

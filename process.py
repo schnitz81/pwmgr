@@ -1,4 +1,3 @@
-import base64
 import database
 import file
 import datacrunch
@@ -12,7 +11,7 @@ def interpret_and_process(received_data):
     # decode received data
     transportdecoded_data = datacrunch.transport_decode(received_data)
     # catch error
-    if '1 invalid base64' in transportdecoded_data.casefold() or '1 decompress error' in transportdecoded_data.casefold():
+    if '1 invalid base64' in transportdecoded_data.casefold() or '1 decompress error' in transportdecoded_data.casefold() or "1 Decrypt error" in transportdecoded_data.casefold():
         returnmsg = transportdecoded_data
         return returnmsg
 
@@ -31,16 +30,16 @@ def interpret_and_process(received_data):
     ### init ############################################################################################
     if command == 'init':
         try:
-            sessionuser = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[1])).decode('utf8').rstrip()
-            sessionpw = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[2])).decode('utf8').rstrip()
-            nonew = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[3])).decode('utf8').rstrip()
-        except Exception as b64decode_error:
-            log(f"Error: Unable to decode base64 data: {b64decode_error}", 0)
-            returnmsg = "1 Invalid base64 data to decode."
+            sessionuser = str(transportdecoded_data.split(' ')[1]).rstrip()
+            sessionpw = str(transportdecoded_data.split(' ')[2]).rstrip()
+            nonew = str(transportdecoded_data.split(' ')[3]).rstrip()
+        except Exception as transportdecoded_data_err:
+            log(f"Error: Unable to interpret decoded transport data: {transportdecoded_data_err}", 0)
+            returnmsg = "1 Unable to fetch valid input parameters from received data."
             return returnmsg
 
         # only create new DB if nonew isn't set
-        if nonew and not file.file_exists(f'{config.db_path}/{sessionuser}.encdb'):
+        if bool(int(nonew)) and not file.file_exists(f'{config.db_path}/{sessionuser}.encdb'):
             log(f"Error: nonew selected and user DB ({config.db_path}/{sessionuser}.encdb) doesn't exist.", 0)
             returnmsg = f"1 nonew selected and user DB ({config.db_path}/{sessionuser}.encdb) doesn't exist."
             return returnmsg
@@ -96,13 +95,13 @@ def interpret_and_process(received_data):
     ### init-change ############################################################################################
     elif command == 'init-change':
         try:
-            sessionuser = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[1])).decode('utf8').rstrip()
-            sessionpw = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[2])).decode('utf8').rstrip()
-            sessionnewuser = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[3])).decode('utf8').rstrip()
-            sessionnewpw = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[4])).decode('utf8').rstrip()
-        except Exception as b64decode_error:
-            log(f"Error: Unable to decode base64 data: {b64decode_error}", 0)
-            returnmsg = "1 Invalid base64 data to decode."
+            sessionuser = str(transportdecoded_data.split(' ')[1]).rstrip()
+            sessionpw = str(transportdecoded_data.split(' ')[2]).rstrip()
+            sessionnewuser = str(transportdecoded_data.split(' ')[3]).rstrip()
+            sessionnewpw = str(transportdecoded_data.split(' ')[4]).rstrip()
+        except Exception as transportdecoded_data_err:
+            log(f"Error: Unable to interpret decoded transport data: {transportdecoded_data_err}", 0)
+            returnmsg = "1 Unable to fetch valid input parameters from received data."
             return returnmsg
 
         # verify db existence
@@ -131,7 +130,7 @@ def interpret_and_process(received_data):
 
             # rename database file to new username
             if credentials_stored:
-                # create transporttoken and save to db before renaming it
+                # create transporttoken and save to db before renaming db file
                 transporttoken = datacrunch.generate_token(50)
                 database.store_transporttoken(conn, transporttoken)
 
@@ -159,12 +158,12 @@ def interpret_and_process(received_data):
     ### status ##########################################################################################
     elif command == 'status':
         try:
-            sessionuser = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[1])).decode('utf8').rstrip()
-            sessionpw = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[2])).decode('utf8').rstrip()
-            tokenmd5 = transportdecoded_data.split(' ')[3]
-        except Exception as b64decode_error:
-            log(f"Error: Unable to decode base64 data: {b64decode_error}", 0)
-            returnmsg = "1 Invalid base64 data to decode."
+            sessionuser = str(transportdecoded_data.split(' ')[1]).rstrip()
+            sessionpw = str(transportdecoded_data.split(' ')[2]).rstrip()
+            tokenmd5 = str(transportdecoded_data.split(' ')[3]).rstrip()
+        except Exception as transportdecoded_data_err:
+            log(f"Error: Unable to interpret decoded transport data: {transportdecoded_data_err}", 0)
+            returnmsg = "1 Unable to fetch valid input parameters from received data."
             return returnmsg
 
         # verify db existence
@@ -205,12 +204,12 @@ def interpret_and_process(received_data):
     ### add | update #####################################################################################
     elif command == 'add' or command == 'update':
         try:
-            sessionuser = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[1])).decode('utf8').rstrip()
-            sessionpw = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[2])).decode('utf8').rstrip()
-            tokenmd5 = transportdecoded_data.split(' ')[3]
-        except Exception as b64decode_error:
-            log(f"Error: Unable to decode base64 data: {b64decode_error}", 0)
-            returnmsg = "1 Invalid base64 data to decode."
+            sessionuser = str(transportdecoded_data.split(' ')[1]).rstrip()
+            sessionpw = str(transportdecoded_data.split(' ')[2]).rstrip()
+            tokenmd5 = str(transportdecoded_data.split(' ')[3]).rstrip()
+        except Exception as transportdecoded_data_err:
+            log(f"Error: Unable to interpret decoded transport data: {transportdecoded_data_err}", 0)
+            returnmsg = "1 Unable to fetch valid input parameters from received data."
             return returnmsg
 
         # verify db existence
@@ -306,12 +305,12 @@ def interpret_and_process(received_data):
     ### get ############################################################################################
     elif command == 'get':
         try:
-            sessionuser = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[1])).decode('utf8').rstrip()
-            sessionpw = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[2])).decode('utf8').rstrip()
-            tokenmd5 = transportdecoded_data.split(' ')[3]
-        except Exception as b64decode_error:
-            log(f"Error: Unable to decode base64 data: {b64decode_error}", 0)
-            returnmsg = "1 Invalid base64 data to decode."
+            sessionuser = str(transportdecoded_data.split(' ')[1]).rstrip()
+            sessionpw = str(transportdecoded_data.split(' ')[2]).rstrip()
+            tokenmd5 = str(transportdecoded_data.split(' ')[3]).rstrip()
+        except Exception as transportdecoded_data_err:
+            log(f"Error: Unable to interpret decoded transport data: {transportdecoded_data_err}", 0)
+            returnmsg = "1 Unable to fetch valid input parameters from received data."
             return returnmsg
 
         # verify db existence
@@ -377,9 +376,9 @@ def interpret_and_process(received_data):
     ### list ############################################################################################
     elif command == 'list':
         try:
-            sessionuser = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[1])).decode('utf8').rstrip()
-            sessionpw = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[2])).decode('utf8').rstrip()
-            tokenmd5 = transportdecoded_data.split(' ')[3]
+            sessionuser = str(transportdecoded_data.split(' ')[1]).rstrip()
+            sessionpw = str(transportdecoded_data.split(' ')[2]).rstrip()
+            tokenmd5 = str(transportdecoded_data.split(' ')[3]).rstrip()
         except Exception as b64decode_error:
             log(f"Error: Unable to decode base64 data: {b64decode_error}", 0)
             returnmsg = "1 Invalid base64 data to decode."
@@ -449,12 +448,12 @@ def interpret_and_process(received_data):
     ### delete ############################################################################################
     elif command == 'delete':
         try:
-            sessionuser = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[1])).decode('utf8').rstrip()
-            sessionpw = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[2])).decode('utf8').rstrip()
-            tokenmd5 = transportdecoded_data.split(' ')[3]
-        except Exception as b64decode_error:
-            log(f"Error: Unable to decode base64 data: {b64decode_error}", 0)
-            returnmsg = "1 Invalid base64 data to decode."
+            sessionuser = str(transportdecoded_data.split(' ')[1]).rstrip()
+            sessionpw = str(transportdecoded_data.split(' ')[2]).rstrip()
+            tokenmd5 = str(transportdecoded_data.split(' ')[3]).rstrip()
+        except Exception as transportdecoded_data_err:
+            log(f"Error: Unable to interpret decoded transport data: {transportdecoded_data_err}", 0)
+            returnmsg = "1 Unable to fetch valid input parameters from received data."
             return returnmsg
 
         # verify db existence
@@ -529,12 +528,12 @@ def interpret_and_process(received_data):
     ### backup ##########################################################################################
     elif command == 'backup':
         try:
-            sessionuser = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[1])).decode('utf8').rstrip()
-            sessionpw = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[2])).decode('utf8').rstrip()
-            tokenmd5 = transportdecoded_data.split(' ')[3]
-        except Exception as b64decode_error:
-            log(f"Error: Unable to decode base64 data: {b64decode_error}", 0)
-            returnmsg = "1 Invalid base64 data to decode."
+            sessionuser = str(transportdecoded_data.split(' ')[1]).rstrip()
+            sessionpw = str(transportdecoded_data.split(' ')[2]).rstrip()
+            tokenmd5 = str(transportdecoded_data.split(' ')[3]).rstrip()
+        except Exception as transportdecoded_data_err:
+            log(f"Error: Unable to interpret decoded transport data: {transportdecoded_data_err}", 0)
+            returnmsg = "1 Unable to fetch valid input parameters from received data."
             return returnmsg
 
         # verify db existence
@@ -584,12 +583,12 @@ def interpret_and_process(received_data):
     ### benchmark ##########################################################################################
     elif command == 'benchmark':
         try:
-            sessionuser = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[1])).decode('utf8').rstrip()
-            sessionpw = base64.b64decode(base64.b64decode(transportdecoded_data.split(' ')[2])).decode('utf8').rstrip()
-            tokenmd5 = transportdecoded_data.split(' ')[3]
-        except Exception as b64decode_error:
-            log(f"Error: Unable to decode base64 data: {b64decode_error}", 0)
-            returnmsg = "1 Invalid base64 data to decode."
+            sessionuser = str(transportdecoded_data.split(' ')[1]).rstrip()
+            sessionpw = str(transportdecoded_data.split(' ')[2]).rstrip()
+            tokenmd5 = str(transportdecoded_data.split(' ')[3]).rstrip()
+        except Exception as transportdecoded_data_err:
+            log(f"Error: Unable to interpret decoded transport data: {transportdecoded_data_err}", 0)
+            returnmsg = "1 Unable to fetch valid input parameters from received data."
             return returnmsg
 
         # verify db existence
