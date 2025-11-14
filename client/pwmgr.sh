@@ -315,7 +315,7 @@ function init-change () {
 
 function sessioncheck () {
 	if ! [ -f "$SESSIONPATH" ]; then
-		echo -e "No local session found. Please run with init parameter to create one.\n"
+		echo -e "No local session found for this user. Please run with init parameter to create one.\n"
 		exit 1
 	elif [[ $(cat $SESSIONPATH | wc -l) -lt 4 ]]; then
 		echo -e "Local session exists but is invalid.\n"
@@ -328,6 +328,7 @@ function status () {
 	sessioncheck
 	echo "Session status check."
 
+	# session data
 	command="status"
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
@@ -405,7 +406,7 @@ function add () {
 		fi
 	done
 
-	# encrypt user and pw
+	# encrypt and transport encrypt DB access data
 	echo -e "\nEncrypting..."
 	title=$(transport_encrypt "$title")
 	username=$(transport_encrypt $(encrypt "$username" "$encryptionpw"))
@@ -413,6 +414,7 @@ function add () {
 	extra=$(transport_encrypt $(encrypt "$extra" "$encryptionpw"))
 	verification=$(transport_encrypt $(encrypt "verification" "$encryptionpw"))
 
+	# session data
 	command="add"
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
@@ -461,8 +463,11 @@ function get () {
 		exit 1
 	fi
 
-	command="get"
+	# transport encrypt DB access data
 	title=$(transport_encrypt "$title")
+
+	# session data
+	command="get"
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
 	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
@@ -507,7 +512,8 @@ function get () {
 			fi
 
 			echo -e "\nDecrypting..."
-			title=$(echo "$decrypted_server_response" | cut -d ' ' -f 1 | base64 -d | base64 -d)
+			# title is received base64 encoded to handle spaces in multiword titles
+			title=$(echo "$decrypted_server_response" | cut -d ' ' -f 1 | base64 -d)
 			echo -e "\ntitle: $title"
 
 			# multithreading for "get" command decryption ####################################
@@ -591,8 +597,11 @@ function list () {
 		exit 1
 	fi
 
-	command="list"
+	# transport encrypt DB access data
 	title=$(transport_encrypt "$title")
+
+	# session data
+	command="list"
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
 	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
@@ -639,8 +648,11 @@ function delete () {
 		exit 1
 	fi
 
-	command="delete"
+	# transport encrypt DB access data
 	title=$(transport_encrypt "$title")
+
+	# session data
+	command="delete"
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
 	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
@@ -724,7 +736,7 @@ function update () {
 		fi
 	done
 
-	# encrypt user and pw
+	# encrypt and transport encrypt DB access data
 	echo -e "\nEncrypting..."
 	title=$(transport_encrypt "$title")
 	username=$(transport_encrypt $(encrypt "$username" "$encryptionpw"))
@@ -732,6 +744,7 @@ function update () {
 	extra=$(transport_encrypt $(encrypt "$extra" "$encryptionpw"))
 	verification=$(transport_encrypt $(encrypt "verification" "$encryptionpw"))
 
+	# session data
 	command="update"
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
@@ -770,6 +783,7 @@ function backup () {
 	sessioncheck
 	echo "Decrypt and backup database file."
 
+	# session data
 	command="backup"
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
@@ -806,14 +820,14 @@ function backup () {
 
 function benchmark () {
 	sessioncheck
-	echo "Session status check."
+	echo -e "\nRunning benchmark..."
 
+	# session data
 	command="benchmark"
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
 	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
 
-	echo -e "\nRunning benchmark..."
 	# initiate benchmark timer
 	benchmark_running_seconds=5
 	successful_responses_counter=0
