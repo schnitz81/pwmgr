@@ -29,6 +29,7 @@ def interpret_and_process(received_data):
 
     ### init ############################################################################################
     if command == 'init':
+        # session data
         try:
             sessionuser = str(transportdecoded_data.split(' ')[1]).rstrip()
             sessionpw = str(transportdecoded_data.split(' ')[2]).rstrip()
@@ -87,13 +88,13 @@ def interpret_and_process(received_data):
             db_written = database.write_inmem_db_to_file(conn, sessionuser, sessionpw)  # write encrypted db file
             if not db_written:
                 returnmsg = f"1 Unable to write server DB to disk ({config.db_path}/{sessionuser}.encdb)."
-
         database.close_connection(conn)
         return returnmsg
 
 
     ### init-change ############################################################################################
     elif command == 'init-change':
+        # session data
         try:
             sessionuser = str(transportdecoded_data.split(' ')[1]).rstrip()
             sessionpw = str(transportdecoded_data.split(' ')[2]).rstrip()
@@ -150,13 +151,13 @@ def interpret_and_process(received_data):
                 returnmsg = "1 Credentials stored but unable to rename DB file. Login will probably not work unless DB file is renamed."
             elif not db_written:
                 returnmsg = "1 Unable to write changed DB to disk."
-
         database.close_connection(conn)
         return returnmsg
 
 
     ### status ##########################################################################################
     elif command == 'status':
+        # session data
         try:
             sessionuser = str(transportdecoded_data.split(' ')[1]).rstrip()
             sessionpw = str(transportdecoded_data.split(' ')[2]).rstrip()
@@ -203,6 +204,7 @@ def interpret_and_process(received_data):
 
     ### add | update #####################################################################################
     elif command == 'add' or command == 'update':
+        # session data
         try:
             sessionuser = str(transportdecoded_data.split(' ')[1]).rstrip()
             sessionpw = str(transportdecoded_data.split(' ')[2]).rstrip()
@@ -244,7 +246,7 @@ def interpret_and_process(received_data):
 
         log(transportdecoded_data.split(' ')[4], 2)
 
-        # transport decryption
+        # transport decrypt DB access data
         title = datacrunch.transport_decrypt(transportdecoded_data.split(' ')[4], transporttoken).rstrip()
         username = datacrunch.transport_decrypt(transportdecoded_data.split(' ')[5], transporttoken).rstrip()
         pw = datacrunch.transport_decrypt(transportdecoded_data.split(' ')[6], transporttoken).rstrip()
@@ -304,6 +306,7 @@ def interpret_and_process(received_data):
 
     ### get ############################################################################################
     elif command == 'get':
+        # session data
         try:
             sessionuser = str(transportdecoded_data.split(' ')[1]).rstrip()
             sessionpw = str(transportdecoded_data.split(' ')[2]).rstrip()
@@ -343,8 +346,9 @@ def interpret_and_process(received_data):
         else:
             log("Session credentials received match server DB.", 1)
 
-        # transport decryption
+        # transport decrypt DB access data
         title = datacrunch.transport_decrypt(transportdecoded_data.split(' ')[4], transporttoken).rstrip()
+
         log(f"Getting title: {title}", 2)
         # if letter is missing in title
         if not any(c.isalpha() for c in title):
@@ -375,6 +379,7 @@ def interpret_and_process(received_data):
 
     ### list ############################################################################################
     elif command == 'list':
+        # session data
         try:
             sessionuser = str(transportdecoded_data.split(' ')[1]).rstrip()
             sessionpw = str(transportdecoded_data.split(' ')[2]).rstrip()
@@ -414,7 +419,7 @@ def interpret_and_process(received_data):
         else:
             log("Session credentials received match server DB.", 1)
 
-        # transport decryption
+        # transport decrypt DB access data
         title = datacrunch.transport_decrypt(transportdecoded_data.split(' ')[4], transporttoken).rstrip()
 
         # if letter is missing in title
@@ -447,6 +452,7 @@ def interpret_and_process(received_data):
 
     ### delete ############################################################################################
     elif command == 'delete':
+        # session data
         try:
             sessionuser = str(transportdecoded_data.split(' ')[1]).rstrip()
             sessionpw = str(transportdecoded_data.split(' ')[2]).rstrip()
@@ -486,7 +492,7 @@ def interpret_and_process(received_data):
         else:
             log("Session credentials received match server DB.", 1)
 
-        # transport decryption
+        # transport decrypt DB access data
         title = datacrunch.transport_decrypt(transportdecoded_data.split(' ')[4], transporttoken).rstrip()
 
         # if letter is missing in title
@@ -527,6 +533,7 @@ def interpret_and_process(received_data):
 
     ### backup ##########################################################################################
     elif command == 'backup':
+        # session data
         try:
             sessionuser = str(transportdecoded_data.split(' ')[1]).rstrip()
             sessionpw = str(transportdecoded_data.split(' ')[2]).rstrip()
@@ -582,6 +589,7 @@ def interpret_and_process(received_data):
 
     ### benchmark ##########################################################################################
     elif command == 'benchmark':
+        # session data
         try:
             sessionuser = str(transportdecoded_data.split(' ')[1]).rstrip()
             sessionpw = str(transportdecoded_data.split(' ')[2]).rstrip()
