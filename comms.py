@@ -35,6 +35,11 @@ def threaded(connsock, addr):
             connsock.close()
             return
 
+        # handle port checks and tiny payloads
+        if len(data) < 5:
+            log("Port check.", 1)
+            return
+
         # generate response
         returnmsg = process.interpret_and_process(data)
 
