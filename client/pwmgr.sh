@@ -6,6 +6,21 @@ KEY_SESSION_SECONDS=$((60*90))
 DEPENDENCIES=("nc" "base64" "openssl" "gzip")
 
 
+function dependencies_check() {
+	# dependencies check
+	for dependency in "${DEPENDENCIES[@]}"; do
+		if ! command -v "$dependency" &> /dev/null; then
+			if [ "$dependency" != "nc" ]; then
+				echo "$dependency not found."
+			else  # specific info about netcat version needed if missing
+				echo "netcat not found. netcat-openbsd version of netcat needed."
+			fi
+			exit 1
+		fi
+	done
+}
+
+
 function response_valid() {
 	local nc_err=$1
 	local response=$2
@@ -332,10 +347,10 @@ function status () {
 	command="status"
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
-	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
+	tokensha256=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | sha256sum | cut -d ' ' -f 1)
 
 	echo -e "\nChecking status..."
-	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${tokenmd5}")
+	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${tokensha256}")
 	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	response_valid $? $SERVERRESPONSE
 	SERVERRESPONSE=$(transport_decode $SERVERRESPONSE)
@@ -418,10 +433,10 @@ function add () {
 	command="add"
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
-	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
+	tokensha256=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | sha256sum | cut -d ' ' -f 1)
 
 	echo -e "\nAdding record...\n"
-	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${tokenmd5} ${title} ${username} ${pw} ${extra} ${verification}")
+	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${tokensha256} ${title} ${username} ${pw} ${extra} ${verification}")
 	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	response_valid $? $SERVERRESPONSE
 	SERVERRESPONSE=$(transport_decode $SERVERRESPONSE)
@@ -470,10 +485,10 @@ function get () {
 	command="get"
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
-	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
+	tokensha256=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | sha256sum | cut -d ' ' -f 1)
 
 	echo -e "\nFetching record..."
-	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${tokenmd5} ${title}")
+	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${tokensha256} ${title}")
 	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	response_valid $? $SERVERRESPONSE
 	SERVERRESPONSE=$(transport_decode $SERVERRESPONSE)
@@ -604,10 +619,10 @@ function list () {
 	command="list"
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
-	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
+	tokensha256=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | sha256sum | cut -d ' ' -f 1)
 
 	echo -e "\nFetching records..."
-	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${tokenmd5} ${title}")
+	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${tokensha256} ${title}")
 	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	response_valid $? $SERVERRESPONSE
 	SERVERRESPONSE=$(transport_decode $SERVERRESPONSE)
@@ -655,10 +670,10 @@ function delete () {
 	command="delete"
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
-	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
+	tokensha256=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | sha256sum | cut -d ' ' -f 1)
 
 	echo -e "\nDeleting record..."
-	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${tokenmd5} ${title}")
+	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${tokensha256} ${title}")
 	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	response_valid $? $SERVERRESPONSE
 	SERVERRESPONSE=$(transport_decode $SERVERRESPONSE)
@@ -748,10 +763,10 @@ function update () {
 	command="update"
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
-	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
+	tokensha256=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | sha256sum | cut -d ' ' -f 1)
 
 	echo -e "\nUpdating record...\n"
-	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${tokenmd5} ${title} ${username} ${pw} ${extra} ${verification}")
+	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${tokensha256} ${title} ${username} ${pw} ${extra} ${verification}")
 	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	response_valid $? $SERVERRESPONSE
 	SERVERRESPONSE=$(transport_decode $SERVERRESPONSE)
@@ -781,16 +796,16 @@ function update () {
 
 function backup () {
 	sessioncheck
-	echo "Decrypt and backup database file."
+	echo "Create backup."
 
 	# session data
 	command="backup"
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
-	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
+	tokensha256=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | sha256sum | cut -d ' ' -f 1)
 
-	echo -e "\nChecking status..."
-	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${tokenmd5}")
+	echo -e "\nDecrypting and creating database backup in server..."
+	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${tokensha256}")
 	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	response_valid $? $SERVERRESPONSE
 	SERVERRESPONSE=$(transport_decode $SERVERRESPONSE)
@@ -826,14 +841,14 @@ function benchmark () {
 	command="benchmark"
 	sessionuser=$(head -n 2 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
-	tokenmd5=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | md5sum | cut -d ' ' -f 1)
+	tokensha256=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | sha256sum | cut -d ' ' -f 1)
 
 	# initiate benchmark timer
 	benchmark_running_seconds=5
 	successful_responses_counter=0
 	start_timer=$SECONDS
 	while [[ "$((SECONDS-start_timer))" -lt "$benchmark_running_seconds" ]]; do
-		encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${tokenmd5}")
+		encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${tokensha256}")
 		tput setaf 9  # red character output
 		echo -n "#"
 		tput sgr0  # reset terminal back to normal colors
@@ -961,17 +976,7 @@ if [[ $nbrOfParams -gt 1 ]]; then
 	fi
 fi
 
-# dependencies check
-for dependency in "${DEPENDENCIES[@]}"; do
-	if ! command -v "$dependency" &> /dev/null; then
-		if [ "$dependency" != "nc" ]; then
-			echo "$dependency not found."
-		else  # specific info about netcat version needed if missing
-			echo "netcat not found. netcat-openbsd version of netcat needed."
-		fi
-		exit 1
-	fi
-done
+dependencies_check
 
 # init parameter input - run init procedure
 if [ "$1" == "init" ] || [ "$1" == "config" ]; then
