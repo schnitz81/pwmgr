@@ -161,7 +161,7 @@ def interpret_and_process(received_data):
         try:
             sessionuser = str(transportdecoded_data.split(' ')[1]).rstrip()
             sessionpw = str(transportdecoded_data.split(' ')[2]).rstrip()
-            tokenmd5 = str(transportdecoded_data.split(' ')[3]).rstrip()
+            tokensha256 = str(transportdecoded_data.split(' ')[3]).rstrip()
         except Exception as transportdecoded_data_err:
             log(f"Error: Unable to interpret decoded transport data: {transportdecoded_data_err}", 0)
             returnmsg = "1 Unable to fetch valid input parameters from received data."
@@ -183,7 +183,7 @@ def interpret_and_process(received_data):
             return returnmsg
 
         # check and fetch transporttoken
-        transporttoken = datacrunch.fetch_token_from_hash(conn, tokenmd5)
+        transporttoken = datacrunch.fetch_token_from_hash(conn, tokensha256)
 
         # verify session credentials
         if not database.credentials_match(conn, sessionuser, sessionpw):
@@ -208,7 +208,7 @@ def interpret_and_process(received_data):
         try:
             sessionuser = str(transportdecoded_data.split(' ')[1]).rstrip()
             sessionpw = str(transportdecoded_data.split(' ')[2]).rstrip()
-            tokenmd5 = str(transportdecoded_data.split(' ')[3]).rstrip()
+            tokensha256 = str(transportdecoded_data.split(' ')[3]).rstrip()
         except Exception as transportdecoded_data_err:
             log(f"Error: Unable to interpret decoded transport data: {transportdecoded_data_err}", 0)
             returnmsg = "1 Unable to fetch valid input parameters from received data."
@@ -230,7 +230,7 @@ def interpret_and_process(received_data):
             return returnmsg
 
         # check and fetch transporttoken
-        transporttoken = datacrunch.fetch_token_from_hash(conn, tokenmd5)
+        transporttoken = datacrunch.fetch_token_from_hash(conn, tokensha256)
 
         # verify session credentials
         if not database.credentials_match(conn, sessionuser, sessionpw):
@@ -310,7 +310,7 @@ def interpret_and_process(received_data):
         try:
             sessionuser = str(transportdecoded_data.split(' ')[1]).rstrip()
             sessionpw = str(transportdecoded_data.split(' ')[2]).rstrip()
-            tokenmd5 = str(transportdecoded_data.split(' ')[3]).rstrip()
+            tokensha256 = str(transportdecoded_data.split(' ')[3]).rstrip()
         except Exception as transportdecoded_data_err:
             log(f"Error: Unable to interpret decoded transport data: {transportdecoded_data_err}", 0)
             returnmsg = "1 Unable to fetch valid input parameters from received data."
@@ -332,7 +332,7 @@ def interpret_and_process(received_data):
             return returnmsg
 
         # check and fetch transporttoken
-        transporttoken = datacrunch.fetch_token_from_hash(conn, tokenmd5)
+        transporttoken = datacrunch.fetch_token_from_hash(conn, tokensha256)
 
         # verify session credentials
         if not database.credentials_match(conn, sessionuser, sessionpw):
@@ -383,7 +383,7 @@ def interpret_and_process(received_data):
         try:
             sessionuser = str(transportdecoded_data.split(' ')[1]).rstrip()
             sessionpw = str(transportdecoded_data.split(' ')[2]).rstrip()
-            tokenmd5 = str(transportdecoded_data.split(' ')[3]).rstrip()
+            tokensha256 = str(transportdecoded_data.split(' ')[3]).rstrip()
         except Exception as b64decode_error:
             log(f"Error: Unable to decode base64 data: {b64decode_error}", 0)
             returnmsg = "1 Invalid base64 data to decode."
@@ -405,7 +405,7 @@ def interpret_and_process(received_data):
             return returnmsg
 
         # check and fetch transporttoken
-        transporttoken = datacrunch.fetch_token_from_hash(conn, tokenmd5)
+        transporttoken = datacrunch.fetch_token_from_hash(conn, tokensha256)
 
         # verify session credentials
         if not database.credentials_match(conn, sessionuser, sessionpw):
@@ -456,7 +456,7 @@ def interpret_and_process(received_data):
         try:
             sessionuser = str(transportdecoded_data.split(' ')[1]).rstrip()
             sessionpw = str(transportdecoded_data.split(' ')[2]).rstrip()
-            tokenmd5 = str(transportdecoded_data.split(' ')[3]).rstrip()
+            tokensha256 = str(transportdecoded_data.split(' ')[3]).rstrip()
         except Exception as transportdecoded_data_err:
             log(f"Error: Unable to interpret decoded transport data: {transportdecoded_data_err}", 0)
             returnmsg = "1 Unable to fetch valid input parameters from received data."
@@ -478,7 +478,7 @@ def interpret_and_process(received_data):
             return returnmsg
 
         # check and fetch transporttoken
-        transporttoken = datacrunch.fetch_token_from_hash(conn, tokenmd5)
+        transporttoken = datacrunch.fetch_token_from_hash(conn, tokensha256)
 
         # verify session credentials
         if not database.credentials_match(conn, sessionuser, sessionpw):
@@ -537,7 +537,7 @@ def interpret_and_process(received_data):
         try:
             sessionuser = str(transportdecoded_data.split(' ')[1]).rstrip()
             sessionpw = str(transportdecoded_data.split(' ')[2]).rstrip()
-            tokenmd5 = str(transportdecoded_data.split(' ')[3]).rstrip()
+            tokensha256 = str(transportdecoded_data.split(' ')[3]).rstrip()
         except Exception as transportdecoded_data_err:
             log(f"Error: Unable to interpret decoded transport data: {transportdecoded_data_err}", 0)
             returnmsg = "1 Unable to fetch valid input parameters from received data."
@@ -564,7 +564,7 @@ def interpret_and_process(received_data):
             return returnmsg
 
         # check and fetch transporttoken
-        transporttoken = datacrunch.fetch_token_from_hash(conn, tokenmd5)
+        transporttoken = datacrunch.fetch_token_from_hash(conn, tokensha256)
 
         # verify session credentials
         if not database.credentials_match(conn, sessionuser, sessionpw):
@@ -593,7 +593,7 @@ def interpret_and_process(received_data):
         try:
             sessionuser = str(transportdecoded_data.split(' ')[1]).rstrip()
             sessionpw = str(transportdecoded_data.split(' ')[2]).rstrip()
-            tokenmd5 = str(transportdecoded_data.split(' ')[3]).rstrip()
+            tokensha256 = str(transportdecoded_data.split(' ')[3]).rstrip()
         except Exception as transportdecoded_data_err:
             log(f"Error: Unable to interpret decoded transport data: {transportdecoded_data_err}", 0)
             returnmsg = "1 Unable to fetch valid input parameters from received data."
@@ -615,7 +615,7 @@ def interpret_and_process(received_data):
             return returnmsg
 
         # check and fetch transporttoken
-        transporttoken = datacrunch.fetch_token_from_hash(conn, tokenmd5)
+        transporttoken = datacrunch.fetch_token_from_hash(conn, tokensha256)
 
         # verify session credentials
         if not database.credentials_match(conn, sessionuser, sessionpw):

@@ -80,14 +80,13 @@ def transport_decode(data):
         return returnmsg
 
 
-
-def fetch_token_from_hash(conn, tokenmd5):
+def fetch_token_from_hash(conn, tokensha256):
     transporttokens = database.get_all_transporttokens(conn)
     # compare hashsums from end of the DB list
     for token in reversed(transporttokens):
-        log(f"Comparing {hashlib.md5(token[0].encode()).hexdigest()} with {tokenmd5}", 2)
-        if hashlib.md5(token[0].encode()).hexdigest() == tokenmd5:
-            log(f"Found matching token for hash: {tokenmd5} ({token})", 2)
+        log(f"Comparing {hashlib.sha256(token[0].encode()).hexdigest()} with {tokensha256}", 2)
+        if hashlib.sha256(token[0].encode()).hexdigest() == tokensha256:
+            log(f"Found matching token for hash: {tokensha256} ({token})", 2)
             return token[0]
     log("Debug: No matching token found in datacrunch function.", 2)
     return False
