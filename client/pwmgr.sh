@@ -160,7 +160,7 @@ function transport_decrypt(){
 function add_newline_if_missing() {
 	# EOF newline handling for BSD compatibility
 	local filepath="$1"
-	if [ -n "$(tail -c 1 $filepath)" ]; then
+	if [ -n "$(tail -c 1 "$filepath")" ]; then
 		printf "\n" >> "$filepath"  # add newline
 	fi
 }
@@ -209,7 +209,7 @@ function init () {
 	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${nonew}")
 	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH.tmp")" $PORT)
 	response_valid $? $SERVERRESPONSE
-	SERVERRESPONSE=$(transport_decode $SERVERRESPONSE)
+	SERVERRESPONSE=$(transport_decode "$SERVERRESPONSE")
 
 	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 		1)
@@ -298,7 +298,7 @@ function init-change () {
 	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${sessionnewuser} ${sessionnewpw}")
 	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH.tmp")" $PORT)
 	response_valid $? $SERVERRESPONSE
-	SERVERRESPONSE=$(transport_decode $SERVERRESPONSE)
+	SERVERRESPONSE=$(transport_decode "$SERVERRESPONSE")
 
 	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 		1)
@@ -332,7 +332,7 @@ function sessioncheck () {
 	if ! [ -f "$SESSIONPATH" ]; then
 		echo -e "No local session found for this user. Please run with init parameter to create one.\n"
 		exit 1
-	elif [[ $(cat $SESSIONPATH | wc -l) -lt 4 ]]; then
+	elif [[ $(cat "$SESSIONPATH" | wc -l) -lt 4 ]]; then
 		echo -e "Local session exists but is invalid.\n"
 		exit 1
 	fi
@@ -349,11 +349,11 @@ function status () {
 	sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d)
 	tokensha256=$(head -n 4 "$SESSIONPATH" | tail -n 1 | base64 -d | base64 -d | sha256sum | cut -d ' ' -f 1)
 
-	echo -e "\nChecking status..."
+	echo -e "\nChecking status against $(head -n 1 "$SESSIONPATH")..."
 	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${tokensha256}")
 	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	response_valid $? $SERVERRESPONSE
-	SERVERRESPONSE=$(transport_decode $SERVERRESPONSE)
+	SERVERRESPONSE=$(transport_decode "$SERVERRESPONSE")
 
 	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 		1)
@@ -424,10 +424,10 @@ function add () {
 	# encrypt and transport encrypt DB access data
 	echo -e "\nEncrypting..."
 	title=$(transport_encrypt "$title")
-	username=$(transport_encrypt $(encrypt "$username" "$encryptionpw"))
-	pw=$(transport_encrypt $(encrypt "$pw" "$encryptionpw"))
-	extra=$(transport_encrypt $(encrypt "$extra" "$encryptionpw"))
-	verification=$(transport_encrypt $(encrypt "verification" "$encryptionpw"))
+	username=$(transport_encrypt "$(encrypt "$username" "$encryptionpw")")
+	pw=$(transport_encrypt "$(encrypt "$pw" "$encryptionpw")")
+	extra=$(transport_encrypt "$(encrypt "$extra" "$encryptionpw")")
+	verification=$(transport_encrypt "$(encrypt "verification" "$encryptionpw")")
 
 	# session data
 	command="add"
@@ -439,7 +439,7 @@ function add () {
 	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${tokensha256} ${title} ${username} ${pw} ${extra} ${verification}")
 	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	response_valid $? $SERVERRESPONSE
-	SERVERRESPONSE=$(transport_decode $SERVERRESPONSE)
+	SERVERRESPONSE=$(transport_decode "$SERVERRESPONSE")
 
 	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 		1)
@@ -491,7 +491,7 @@ function get () {
 	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${tokensha256} ${title}")
 	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	response_valid $? $SERVERRESPONSE
-	SERVERRESPONSE=$(transport_decode $SERVERRESPONSE)
+	SERVERRESPONSE=$(transport_decode "$SERVERRESPONSE")
 
 	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 		1)
@@ -507,7 +507,7 @@ function get () {
 			encryptionpw=$(get_key_from_key_session)
 			if [ -n "$encryptionpw" ]; then
 				echo -e "\nTesting key session password..."
-				verification=$(decrypt $(echo "$decrypted_server_response" | cut -d ' ' -f 5) "$encryptionpw")
+				verification=$(decrypt "$(echo "$decrypted_server_response" | cut -d ' ' -f 5)" "$encryptionpw")
 			fi
 
 			# no valid encpw from key session, enter manually
@@ -519,7 +519,7 @@ function get () {
 
 				# decrypt and verify verification string when entered manually
 				echo -e "\nTesting password..."
-				verification=$(decrypt $(echo "$decrypted_server_response" | cut -d ' ' -f 5) "$encryptionpw")
+				verification=$(decrypt "$(echo "$decrypted_server_response" | cut -d ' ' -f 5)" "$encryptionpw")
 				if [ "$verification" != "verification" ]; then
 					echo -e "\nError: Wrong encryption password given. Unable to decrypt.\n"
 					exit 1
@@ -535,12 +535,12 @@ function get () {
 			(  # extra process
 				(  # pw process
 					(  # username process
-						username=$(decrypt $(echo "$decrypted_server_response" | cut -d ' ' -f 2) "$encryptionpw")
+						username=$(decrypt "$(echo "$decrypted_server_response" | cut -d ' ' -f 2)" "$encryptionpw")
 						echo "username: $username"
 					) &
 					pid_username=$!  # store PID of the username decryption and printout process
 
-					pw=$(decrypt $(echo "$decrypted_server_response" | cut -d ' ' -f 3) "$encryptionpw")
+					pw=$(decrypt "$(echo "$decrypted_server_response" | cut -d ' ' -f 3)" "$encryptionpw")
 					wait $pid_username  # wait for username to be printed before printing pw output
 					if (( $nomask )); then  # output password depending on nomask input parameter
 						echo "password: $pw"
@@ -571,7 +571,7 @@ function get () {
 				) &
 				pid_pw=$! # store PID of the pw decryption and printout process
 
-				extra=$(decrypt $(echo "$decrypted_server_response" | cut -d ' ' -f 4) "$encryptionpw")
+				extra=$(decrypt "$(echo "$decrypted_server_response" | cut -d ' ' -f 4)" "$encryptionpw")
 				wait $pid_pw  # wait for the pw printout before printing extra output
 				echo -e "extra info: $extra\n"
 			) &
@@ -625,7 +625,7 @@ function list () {
 	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${tokensha256} ${title}")
 	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	response_valid $? $SERVERRESPONSE
-	SERVERRESPONSE=$(transport_decode $SERVERRESPONSE)
+	SERVERRESPONSE=$(transport_decode "$SERVERRESPONSE")
 
 	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 		1)
@@ -676,7 +676,7 @@ function delete () {
 	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${tokensha256} ${title}")
 	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	response_valid $? $SERVERRESPONSE
-	SERVERRESPONSE=$(transport_decode $SERVERRESPONSE)
+	SERVERRESPONSE=$(transport_decode "$SERVERRESPONSE")
 
 	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 		1)
@@ -754,10 +754,10 @@ function update () {
 	# encrypt and transport encrypt DB access data
 	echo -e "\nEncrypting..."
 	title=$(transport_encrypt "$title")
-	username=$(transport_encrypt $(encrypt "$username" "$encryptionpw"))
-	pw=$(transport_encrypt $(encrypt "$pw" "$encryptionpw"))
-	extra=$(transport_encrypt $(encrypt "$extra" "$encryptionpw"))
-	verification=$(transport_encrypt $(encrypt "verification" "$encryptionpw"))
+	username=$(transport_encrypt "$(encrypt "$username" "$encryptionpw")")
+	pw=$(transport_encrypt "$(encrypt "$pw" "$encryptionpw")")
+	extra=$(transport_encrypt "$(encrypt "$extra" "$encryptionpw")")
+	verification=$(transport_encrypt "$(encrypt "verification" "$encryptionpw")")
 
 	# session data
 	command="update"
@@ -769,7 +769,7 @@ function update () {
 	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${tokensha256} ${title} ${username} ${pw} ${extra} ${verification}")
 	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	response_valid $? $SERVERRESPONSE
-	SERVERRESPONSE=$(transport_decode $SERVERRESPONSE)
+	SERVERRESPONSE=$(transport_decode "$SERVERRESPONSE")
 
 	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 		1)
@@ -808,7 +808,7 @@ function backup () {
 	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${tokensha256}")
 	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 	response_valid $? $SERVERRESPONSE
-	SERVERRESPONSE=$(transport_decode $SERVERRESPONSE)
+	SERVERRESPONSE=$(transport_decode "$SERVERRESPONSE")
 
 	case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 		1)
@@ -854,7 +854,7 @@ function benchmark () {
 		tput sgr0  # reset terminal back to normal colors
 		SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH")" $PORT)
 		response_valid $? $SERVERRESPONSE
-		SERVERRESPONSE=$(transport_decode $SERVERRESPONSE)
+		SERVERRESPONSE=$(transport_decode "$SERVERRESPONSE")
 
 		case $(echo "$SERVERRESPONSE" | cut -d ' ' -f 1) in
 			1)
