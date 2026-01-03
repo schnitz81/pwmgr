@@ -4,20 +4,6 @@ from flask import flash
 import re
 
 
-def test():
-    try:
-        value = subprocess.run(f'''
-                pwmgr status
-            ''',
-            shell=True, check=True,
-            executable='/bin/bash',
-            capture_output=True,
-            text=True)
-        return value.stdout
-    except Exception as test_e:
-        print(test_e)
-
-
 def init(server, sessionuser, sessionpw, new):
     try:
         log('Init handshake...')
@@ -138,8 +124,8 @@ def delete_session():
             capture_output=True,
             text=True)
         return value.stdout
-    except Exception as test_e:
-        print(test_e)
+    except Exception as delete_e:
+        print(delete_e)
 
 
 def search(title):
