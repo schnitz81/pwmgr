@@ -79,7 +79,7 @@ def interpret_and_process(received_data):
 
         if credentials_ok:
             #create transporttoken
-            transporttoken = datacrunch.generate_token(50)
+            transporttoken = datacrunch.generate_token(80)
             database.store_transporttoken(conn, transporttoken)
             if created_new_db:
                 returnmsg = f"2 {transporttoken}"
@@ -132,7 +132,7 @@ def interpret_and_process(received_data):
             # rename database file to new username
             if credentials_stored:
                 # create transporttoken and save to db before renaming db file
-                transporttoken = datacrunch.generate_token(50)
+                transporttoken = datacrunch.generate_token(80)
                 database.store_transporttoken(conn, transporttoken)
 
                 # write encrypted db file with OLD username and NEW password since it's not renamed to new username yet
