@@ -3,7 +3,7 @@
 PORT=48222
 SESSIONPATH="$HOME/.config/pwmgr/.session"
 KEY_SESSION_SECONDS=$((60*90))
-DEPENDENCIES=("nc" "base64" "openssl" "gzip")
+DEPENDENCIES=("nc" "base64" "sha256sum" "openssl" "gzip" "gunzip")
 
 
 function dependencies_check() {
@@ -12,7 +12,7 @@ function dependencies_check() {
 		if ! command -v "$dependency" &> /dev/null; then
 			if [ "$dependency" != "nc" ]; then
 				echo "$dependency not found."
-			else  # specific info about netcat version needed if missing
+			else  # specific info about netcat version when missing
 				echo "netcat not found. netcat-openbsd version of netcat needed."
 			fi
 			exit 1
@@ -83,8 +83,9 @@ function add_key_to_key_session() {
 			keyctl revoke $(keyctl search @u user pwmgr)
 		fi
 		local encpw=$1
-		local b64sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1 | base64 -d)  # get sessionpw from session file
-		if [ "$(echo $b64sessionpw | wc -m)" -gt 3 ]; then
+		local b64sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1 | base64 -d)  # get base64 of sessionpw from session file
+		if [ "$(echo $b64sessionpw | wc -m)" -gt 3 ]; then  # check that b64sessionpw is nonempty
+			# encrypt, base64 and swap
 			local encpw_encrypted=$(encrypt "$encpw" "$b64sessionpw")
 			local b64_encpw_unswapped=$(echo -n "$encpw_encrypted" | base64 -w0)
 			local b64_encpw_swapped=$(b64swap "$b64_encpw_unswapped")
@@ -103,9 +104,10 @@ function get_key_from_key_session() {
 		if $(keyctl list @u | grep -v 'expired' | grep -q 'pwmgr'); then  # only fetch key if the key session exists
 			# check for error when using key
 			keyctl pipe $(keyctl search @u user pwmgr) 1>/dev/null  # test key fetching to detect any error
-			if [ $? -ne 1 ]; then
-				local b64sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1 | base64 -d)
-				local b64_encpw_unswapped=$(keyctl pipe $(keyctl search @u user pwmgr))
+			if [ $? -ne 1 ]; then  # only fetch key if no error was detected
+				local b64sessionpw=$(head -n 3 "$SESSIONPATH" | tail -n 1 | base64 -d)  # get base64 of sessionpw from session file
+				local b64_encpw_unswapped=$(keyctl pipe $(keyctl search @u user pwmgr))  # retrieve encrypted password from key session
+				# unswap, debase64 and decrypt
 				local b64_encpw_swapped=$(b64swap "$b64_encpw_unswapped")
 				local encpw_encrypted=$(echo "$b64_encpw_swapped" | base64 -d)
 				local encpw=$(decrypt "$encpw_encrypted" "$b64sessionpw")
