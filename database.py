@@ -101,6 +101,7 @@ def credentials_exist(conn):
 
 
 def credentials_match(conn, sessionuser, sessionpw):
+    # compare sessionuser and the hash of the input sessionpw against the hash stored in the credentials table
     c = conn.cursor()
     with conn:
         c.execute("SELECT sessionuser FROM credentials")
@@ -117,19 +118,8 @@ def credentials_match(conn, sessionuser, sessionpw):
             return False
 
 
-def transporttoken_match(conn, tokensha256):
-    c = conn.cursor()
-    with conn:
-        c.execute(f'''SELECT token FROM transporttokens;''')
-        db_values = c.fetchall()
-        strlist = ' | '.join(map(','.join, db_values))
-        for token in strlist:
-            if hashlib.sha3_512(token.encode()).hexdigest() == tokensha256:
-                return True
-        return False
-
-
 def store_credentials(conn, sessionuser, sessionpw):
+    # store sessionuser and hashsum of sessionpw to credentials table
     c = conn.cursor()
     try:
         hashed_sessionpw = hashlib.sha3_512(sessionpw.encode()).hexdigest()

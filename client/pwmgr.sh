@@ -76,6 +76,24 @@ function transport_decode() {
 }
 
 
+function create_init_privkey() {
+	init_privkey=$(openssl genpkey -algorithm rsa  -pkeyopt rsa_keygen_bits:2048 | base64 -w0)
+	echo "$init_privkey"
+}
+
+
+function create_init_pubkey() {
+	# privkey as input parameter
+	if [ -z "$1" ]; then
+		echo "Client error: No client init privkey found. Unable to generate matching pubkey."
+		return
+	fi
+	privkey="$1"
+	init_pubkey=$(echo -n "$privkey" | base64 -d | openssl rsa -pubout | base64 -w0)
+	echo "$init_pubkey"
+}
+
+
 function add_key_to_key_session() {
 	if [ -n "$(which keyctl 2>/dev/null)" ] ; then
 		keyctl link @u @s 1>/dev/null 2>&1  # link user and session keyring
@@ -159,6 +177,13 @@ function transport_decrypt(){
 }
 
 
+function init_decrypt(){
+	local encrypted_data="$1"
+	local init_privkey=$2
+	echo "$encrypted_data" | base64 -d | openssl pkeyutl -decrypt -inkey <(printf '%s' "$init_privkey"  | base64 -d) -pkeyopt rsa_padding_mode:oaep | tr -d "\0"
+}
+
+
 function add_newline_if_missing() {
 	# EOF newline handling for BSD compatibility
 	local filepath="$1"
@@ -202,13 +227,22 @@ function init () {
 	add_newline_if_missing "$SESSIONPATH.tmp"
 	echo
 
+	# generate init keys
+	echo -e "\nGenerating init privkey..."
+	init_privkey=$(create_init_privkey)
+	if [[ $(echo "$init_privkey" | wc -w) -ne 1 ]]; then  # check if privkey is valid before creating pubkey
+		echo "Error: init_privkey not created successfully."; exit 1
+	fi
+	echo -e "\nGenerating init pubkey..."
+	init_pubkey=$(create_init_pubkey "$init_privkey")
+
 	# align session with server and create a new user table if non-existent
 	echo -e "\nSyncing server."
 	command="init"
 	sessionuser=$(head -n 2 "$SESSIONPATH.tmp" | tail -n 1 | base64 -d | base64 -d)
 	sessionpw=$(head -n 3 "$SESSIONPATH.tmp" | tail -n 1 | base64 -d | base64 -d)
 	nonew=$(echo -n "$nonew")
-	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${nonew}")
+	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${init_pubkey} ${nonew}")
 	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH.tmp")" $PORT)
 	response_valid $? $SERVERRESPONSE
 	SERVERRESPONSE=$(transport_decode "$SERVERRESPONSE")
@@ -219,7 +253,16 @@ function init () {
 			echo
 			;;
 		2|3)
-			transporttoken=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
+			initencrypted_transporttoken=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2)
+			initencrypted_verification=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 3)
+			# decrypt response with the temporary init privkey
+			transporttoken=$(init_decrypt "$initencrypted_transporttoken" "$init_privkey")
+			verification=$(init_decrypt "$initencrypted_verification" "$init_privkey")
+      # verify init communication and decryption
+			if [ "$verification" != "verification" ]; then
+				echo -e "\nError: Init failed. Server response is not valid.\n"
+				exit 1
+			fi
 			echo -n "$transporttoken" | base64 -w0 | base64 -w0 >> "$SESSIONPATH.tmp"
 			add_newline_if_missing "$SESSIONPATH.tmp"
 			# activate local session
@@ -227,7 +270,7 @@ function init () {
 			if [ $? != 0 ]; then
 				echo -e "Error: Local session activation unsuccessful.\n"
 				exit 1
-			else
+			else  # verify whether old user DB is reused or new is created.
 				if [ "$(echo "$SERVERRESPONSE" | cut -d ' ' -f 1)" == "2" ]; then
 					echo -n "Previous user DB missing, new DB created. "
 				else
@@ -294,10 +337,19 @@ function init-change () {
 	sessionnewuser=$(head -n 2 "$SESSIONPATH.tmp" | tail -n 1 | base64 -d | base64 -d)
 	sessionnewpw=$(head -n 3 "$SESSIONPATH.tmp" | tail -n 1 | base64 -d | base64 -d)
 
+	# generate init keys
+	echo -e "\nGenerating init privkey..."
+	init_privkey=$(create_init_privkey)
+	if [[ $(echo "$init_privkey" | wc -w) -ne 1 ]]; then  # check if privkey is valid before creating pubkey
+		echo "Error: init_privkey not created successfully."; exit 1
+	fi
+	echo -e "\nGenerating init pubkey..."
+	init_pubkey=$(create_init_pubkey "$init_privkey")
+
 	# align session with server and create a new user table if non-existent
 	echo -e "\nSyncing server."
 	command="init-change"
-	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${sessionnewuser} ${sessionnewpw}")
+	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${sessionnewuser} ${sessionnewpw} ${init_pubkey}")
 	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH.tmp")" $PORT)
 	response_valid $? $SERVERRESPONSE
 	SERVERRESPONSE=$(transport_decode "$SERVERRESPONSE")
@@ -308,7 +360,16 @@ function init-change () {
 			echo
 			;;
 		2)
-			transporttoken=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2-)
+			initencrypted_transporttoken=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 2)
+			initencrypted_verification=$(echo "$SERVERRESPONSE" | cut -d ' ' -f 3)
+			# decrypt response with the temporary init privkey
+			transporttoken=$(init_decrypt "$initencrypted_transporttoken" "$init_privkey")
+			verification=$(init_decrypt "$initencrypted_verification" "$init_privkey")
+			# verify init communication and decryption
+			if [ "$verification" != "verification" ]; then
+				echo -e "\nError: Init change failed. Server response is not valid.\n"
+				exit 1
+			fi
 			echo -n "$transporttoken" | base64 -w0 | base64 -w0 >> "$SESSIONPATH.tmp"
 			add_newline_if_missing "$SESSIONPATH.tmp"
 			# activate local session
@@ -318,7 +379,7 @@ function init-change () {
 				echo -e "Error: Local session replacement unsuccessful.\n"
 				exit 1
 			else
-				echo "Local session and remote server DB aligned successfully."
+				echo "Local session and remote server DB aligned successfully ($sessionuser -> $sessionnewuser)."
 			fi
 			;;
 		*)

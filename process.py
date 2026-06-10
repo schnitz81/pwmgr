@@ -33,7 +33,8 @@ def interpret_and_process(received_data):
         try:
             sessionuser = str(transportdecoded_data.split(' ')[1]).rstrip()
             sessionpw = str(transportdecoded_data.split(' ')[2]).rstrip()
-            nonew = str(transportdecoded_data.split(' ')[3]).rstrip()
+            init_pubkey = str(transportdecoded_data.split(' ')[3]).rstrip()
+            nonew = str(transportdecoded_data.split(' ')[4]).rstrip()
         except Exception as transportdecoded_data_err:
             log(f"Error: Unable to interpret decoded transport data: {transportdecoded_data_err}", 0)
             returnmsg = "1 Unable to fetch valid input parameters from received data."
@@ -80,11 +81,19 @@ def interpret_and_process(received_data):
         if credentials_ok:
             #create transporttoken
             transporttoken = datacrunch.generate_token(80)
-            database.store_transporttoken(conn, transporttoken)
+            initencrypted_transporttoken = datacrunch.init_encrypt(transporttoken, init_pubkey)
+            initencrypted_verification = datacrunch.init_encrypt('verification', init_pubkey)
+            # verify that transporttoken was encrypted successfully
+            if not initencrypted_transporttoken:  # check if transporttoken encryption failed
+                log('Error: Unable to encrypt transporttoken from received init_pubkey.', 0)
+                returnmsg = "1 Unable to encrypt transporttoken from received init_pubkey."
+            else:  # successful transporttoken encryption
+                log('transporttoken initencrypted successfully', 2)
+                database.store_transporttoken(conn, transporttoken)
             if created_new_db:
-                returnmsg = f"2 {transporttoken}"
+                returnmsg = f"2 {initencrypted_transporttoken} {initencrypted_verification}"
             else:  # reused old db file, different response code
-                returnmsg = f"3 {transporttoken}"
+                returnmsg = f"3 {initencrypted_transporttoken} {initencrypted_verification}"
             db_written = database.write_inmem_db_to_file(conn, sessionuser, sessionpw)  # write encrypted db file
             if not db_written:
                 returnmsg = f"1 Unable to write server DB to disk ({config.db_path}/{sessionuser}.encdb)."
@@ -100,6 +109,7 @@ def interpret_and_process(received_data):
             sessionpw = str(transportdecoded_data.split(' ')[2]).rstrip()
             sessionnewuser = str(transportdecoded_data.split(' ')[3]).rstrip()
             sessionnewpw = str(transportdecoded_data.split(' ')[4]).rstrip()
+            init_pubkey = str(transportdecoded_data.split(' ')[5]).rstrip()
         except Exception as transportdecoded_data_err:
             log(f"Error: Unable to interpret decoded transport data: {transportdecoded_data_err}", 0)
             returnmsg = "1 Unable to fetch valid input parameters from received data."
@@ -133,18 +143,26 @@ def interpret_and_process(received_data):
             if credentials_stored:
                 # create transporttoken and save to db before renaming db file
                 transporttoken = datacrunch.generate_token(80)
+                initencrypted_transporttoken = datacrunch.init_encrypt(transporttoken, init_pubkey)
+                initencrypted_verification = datacrunch.init_encrypt('verification', init_pubkey)
+                # verify that transporttoken was encrypted successfully
+                if not initencrypted_transporttoken:  # check if transporttoken encryption failed
+                    log('Error: Unable to encrypt transporttoken from received init_pubkey.', 0)
+                    returnmsg = "1 Unable to encrypt transporttoken from received init_pubkey."
+                else:  # successful transporttoken encryption
+                    log('transporttoken initencrypted successfully', 2)
                 database.store_transporttoken(conn, transporttoken)
 
                 # write encrypted db file with OLD username and NEW password since it's not renamed to new username yet
                 db_written = database.write_inmem_db_to_file(conn, sessionuser, sessionnewpw)
 
-                # renae encrypted db file to new username
+                # rename encrypted db file to new username
                 dbfile_renamed = file.rename_file(f'{config.db_path}/{sessionuser}.encdb', f'{config.db_path}/{sessionnewuser}.encdb')
 
             # return rename and credentials change result
             if credentials_stored and dbfile_renamed and db_written:
                 log(f"Old credentials overwritten and DB file renamed successfully ({sessionuser} -> {sessionnewuser}).", 1)
-                returnmsg = f"2 {transporttoken}"
+                returnmsg = f"2 {initencrypted_transporttoken} {initencrypted_verification}"
             elif not credentials_stored:
                 returnmsg = "1 Credentials storing unsuccessful."
             elif credentials_stored and not dbfile_renamed:
