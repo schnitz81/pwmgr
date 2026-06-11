@@ -24,7 +24,7 @@ Alt. use the Dockerfile to build it. The appropriate port needs to be forwarded 
 
 ### Requirements
 
-The client needs netcat-openbsd, openssl and gzip.
+The client needs netcat-openbsd, openssl and gzip + gunzip.
 
 ### Installation
 Download the client file and make it executable.<br>
@@ -113,7 +113,7 @@ Since it only interacts with the terminal based client, it only needs the client
 - BSD version of netcat (package commonly named `netcat-openbsd`)
 - openssl (available in most base installations)
 - base64 (available in most base installations)
-- gzip (available in most base installations)
+- gzip + gunzip (available in most base installations)
 
 <b>Client optional:</b>
 - keyctl from `keyutils` package (for remembering last used encryption password for a limited time)

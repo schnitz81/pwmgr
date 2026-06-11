@@ -237,7 +237,7 @@ function init () {
 	init_pubkey=$(create_init_pubkey "$init_privkey")
 
 	# align session with server and create a new user table if non-existent
-	echo -e "\nSyncing server."
+	echo -e "\nSyncing server..."
 	command="init"
 	sessionuser=$(head -n 2 "$SESSIONPATH.tmp" | tail -n 1 | base64 -d | base64 -d)
 	sessionpw=$(head -n 3 "$SESSIONPATH.tmp" | tail -n 1 | base64 -d | base64 -d)
@@ -258,7 +258,7 @@ function init () {
 			# decrypt response with the temporary init privkey
 			transporttoken=$(init_decrypt "$initencrypted_transporttoken" "$init_privkey")
 			verification=$(init_decrypt "$initencrypted_verification" "$init_privkey")
-      # verify init communication and decryption
+			# verify init communication and decryption
 			if [ "$verification" != "verification" ]; then
 				echo -e "\nError: Init failed. Server response is not valid.\n"
 				exit 1
@@ -347,7 +347,7 @@ function init-change () {
 	init_pubkey=$(create_init_pubkey "$init_privkey")
 
 	# align session with server and create a new user table if non-existent
-	echo -e "\nSyncing server."
+	echo -e "\nSyncing server..."
 	command="init-change"
 	encoded_request=$(transport_encode "${command} ${sessionuser} ${sessionpw} ${sessionnewuser} ${sessionnewpw} ${init_pubkey}")
 	SERVERRESPONSE=$(echo -n "$encoded_request" | nc -N -w 5 "$(head -n 1 "$SESSIONPATH.tmp")" $PORT)
