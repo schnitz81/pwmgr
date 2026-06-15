@@ -92,6 +92,22 @@ def fetch_token_from_hash(conn, tokensha256):
     return False
 
 
+def init_encrypt(unencrypted_data, init_pubkey):
+    # encrypt data with received client init pubkey
+    try:
+        openssl_output = subprocess.run(f'''
+                echo "{unencrypted_data}" | openssl pkeyutl -encrypt -inkey <(printf '%s' "{init_pubkey}" | base64 -d) -pubin -pkeyopt rsa_padding_mode:oaep | base64 -w0 | tr -d "\n"
+            ''',
+            shell=True, check=True,
+            executable='/bin/sh',
+            capture_output=True,
+            text=True
+        )
+        return openssl_output.stdout
+    except Exception as openssl_e:
+        log(openssl_e, 0)
+
+
 def transport_decrypt(data, transporttoken):
     try:
         # decrypt data with generated encryptionpw
