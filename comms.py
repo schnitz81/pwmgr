@@ -25,6 +25,7 @@ def threaded(connsock, addr):
 
     # check IP ban
     if not bruteforcecheck.is_allowed_to_login(addr[0]):
+        log("IP temporarily banned.", 1)
         returnmsg = "1 Error: Client IP banned."
     else:
         try:
