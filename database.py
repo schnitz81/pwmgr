@@ -24,8 +24,8 @@ def create_connection(sessionuser, sessionpw):
     conn = None
     try:
         conn = sqlite3.connect(":memory:")
-    except Exception as e:
-        log(e, 0)
+    except Exception as conn_memory_e:
+        log(conn_memory_e, 0)
         conn.close()
     # read db file, decrypt and read into inmem sqlite db
     if file.file_exists(f'{config.db_path}/{sessionuser}.encdb'):  # encrypted .encdb file
@@ -250,8 +250,8 @@ def write_inmem_db_to_file(conn, sessionuser, sessionpw):
             return True
         else:
             return False
-    except Exception as e:
-        log(e, 0)
+    except Exception as writeinmem_e:
+        log(writeinmem_e, 0)
         conn.close()
         return False
 
@@ -271,7 +271,13 @@ def write_inmem_db_to_file_unencrypted(conn, sessionuser):
 
 
 def close_connection(conn):
-    conn.commit()
-    if logging.benchmark_running_counter == 0:
-        log("Disconnecting from DB.", 1)
-    conn.close()
+    # close database connection
+    if conn is not None:
+        try:
+            conn.commit()
+            # only log db connection close if benchmark isn't running
+            if logging.benchmark_running_counter == 0:
+                log("Disconnecting from DB.", 1)
+            conn.close()
+        except Exception as closedbconnection_e:
+            log(closedbconnection_e, 0)
