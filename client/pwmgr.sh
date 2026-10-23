@@ -206,8 +206,13 @@ function init () {
 	echo ; read -p "Enter session username: " username
 	if [ "$username" == '' ]; then
 		echo -e "\nError: session username can't be empty.\n"; exit 1
+	elif [[ $username =~ [[:space:]]+ ]]; then
+		echo -e "\nError: session username can't contain any spaces.\n"; exit 1
 	fi
 	read -s -p "Enter session password: " sessionpw
+	if [[ $sessionpw =~ [[:space:]]+ ]]; then
+		echo -e "\nError: session password can't contain any spaces.\n"; exit 1
+	fi
 	echo ; read -s -p "Repeat session password: " sessionpw2
 	if [ "$sessionpw" != "$sessionpw2" ]; then
 		echo -e "\n\nError: passwords don't match.\n"; exit 1
@@ -312,8 +317,13 @@ function init-change () {
 	echo ; echo ; read -p "Enter NEW session username: " sessionnewuser
 	if [ "$sessionnewuser" == '' ]; then
 		echo -e "\nError: session username can't be empty.\n"; exit 1
+	elif [[ $sessionnewuser =~ [[:space:]]+ ]]; then
+		echo -e "\nError: session username can't contain any spaces.\n"; exit 1
 	fi
 	read -s -p "Enter NEW session password: " sessionnewpw
+	if [[ $sessionnewpw =~ [[:space:]]+ ]]; then
+		echo -e "\nError: session password can't contain any spaces.\n"; exit 1
+	fi
 	echo ; read -s -p "Repeat NEW session password: " sessionnewpw2
 	if [ "$sessionnewpw" != "$sessionnewpw2" ]; then
 		echo -e "\n\nError: passwords don't match.\n"; exit 1
