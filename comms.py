@@ -29,7 +29,13 @@ def threaded(connsock, addr):
         returnmsg = "1 Error: Client IP banned."
     else:
         try:
-            data = connsock.recv(16384)
+            data = b''
+            for i in range(20):  # read received data in 1kB chunks
+                data_chunk = connsock.recv(1024)
+                if data_chunk:  # if data is still being received
+                    data += data_chunk
+                else:
+                    break
         except ConnectionResetError as conn_error:
             log(f"Connection reset error: {conn_error}", 0)
             # disconnect the server
