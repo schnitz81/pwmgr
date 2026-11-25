@@ -65,7 +65,7 @@ def create_tables(conn):
                CREATE TABLE IF NOT EXISTS credentials (
                id INTEGER PRIMARY KEY,
                sessionuser TEXT NOT NULL,
-               sessionpw TEXT NOT NULL      
+               sessionpw TEXT NOT NULL
            );'''
         )
         c.execute(
@@ -198,6 +198,7 @@ def list_partial_title_records(conn, title):
     with conn:
         c.execute(f'''SELECT title FROM records WHERE title LIKE '%{title}%' COLLATE NOCASE;''')
         db_values = c.fetchall()
+        db_values.sort(key=lambda db_values: db_values[0].lower())  # sort case-insensitive
         strlist = ' | '.join(map(','.join, db_values))
         log(strlist, 2)
         return strlist
@@ -208,6 +209,7 @@ def list_all_title_records(conn):
     with conn:
         c.execute(f'''SELECT title FROM records;''')
         db_values = c.fetchall()
+        db_values.sort(key=lambda db_values: db_values[0].lower())  # sort case-insensitive
         strlist = ' | '.join(map(','.join, db_values))
         log(strlist, 2)
         return strlist
